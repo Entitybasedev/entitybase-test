@@ -1,0 +1,29 @@
+---
+# Benchmark role - runs measurements and collects results
+- name: Create results directory
+  file:
+    path: /opt/entitybase/results
+    state: directory
+    mode: "0755"
+
+- name: Run EntityBase benchmark
+  command: >
+    python3 -m entitybase benchmark
+    --db-url "mysql://entitybase@{{ entitybase_mariadb_host }}/entitybase"
+    --output /opt/entitybase/results/benchmark.json
+  args:
+    chdir: /opt/entitybase
+  register: benchmark_result
+  ignore_errors: yes
+
+- name: Print benchmark result
+  debug:
+    var: benchmark_result.stdout_lines
+  when: benchmark_result is defined
+
+- name: Fetch results to controller
+  fetch:
+    src: /opt/entitybase/results/benchmark.json
+    dest: "{{ playbook_dir }}/../results/{{ inventory_hostname }}_benchmark.json"
+    flat: yes
+  ignore_errors: yes

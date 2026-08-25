@@ -1,0 +1,35 @@
+---
+- name: EntityBase Test Infrastructure
+  hosts: all
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+
+- name: MariaDB Setup
+  hosts: mariadb
+  become: true
+  roles:
+    - role: entitybase
+      tags: [mariadb]
+
+- name: EntityBase Backends
+  hosts: backend
+  become: true
+  roles:
+    - role: entitybase
+      tags: [entitybase]
+
+- name: Wikidata
+  hosts: backend
+  become: true
+  roles:
+    - role: wikidata
+      tags: [wikidata]
+
+- name: Benchmark
+  hosts: backend
+  become: true
+  roles:
+    - role: benchmark
+      tags: [benchmark]

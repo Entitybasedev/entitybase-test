@@ -1,0 +1,14 @@
+---
+- name: restart mariadb
+  systemd:
+    name: mariadb
+    state: restarted
+
+- name: restart entitybase
+  systemd:
+    name: entitybase
+    state: restarted
+
+- name: daemon reload
+  systemd:
+    daemon_reload: yes

@@ -1,0 +1,41 @@
+---
+# EntityBase backend role - installs from source with poetry
+- name: Clone EntityBase repository
+  git:
+    repo: "{{ entitybase_repo }}"
+    dest: /opt/entitybase
+    version: "{{ entitybase_branch }}"
+    force: yes
+
+- name: Install poetry
+  pip:
+    name: poetry
+    executable: pip3
+
+- name: Install EntityBase dependencies
+  command: poetry install --no-root
+  args:
+    chdir: /opt/entitybase
+
+- name: Deploy entitybase env config
+  template:
+    src: entitybase.env.j2
+    dest: /opt/entitybase/.env
+    mode: "0600"
+  notify: restart entitybase
+
+- name: Create systemd service for entitybase
+  template:
+    src: entitybase.service.j2
+    dest: /etc/systemd/system/entitybase.service
+    mode: "0644"
+  notify:
+    - daemon reload
+    - restart entitybase
+
+- name: Enable and start entitybase service
+  systemd:
+    name: entitybase
+    state: started
+    enabled: yes
+    daemon_reload: yes

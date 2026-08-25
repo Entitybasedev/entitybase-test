@@ -1,0 +1,41 @@
+---
+# Wikidata role - downloads lexeme dump and loads into MariaDB
+- name: Install wget
+  apt:
+    name: wget
+    state: present
+
+- name: Create data directory
+  file:
+    path: /opt/entitybase/data
+    state: directory
+    mode: "0755"
+
+- name: Download Wikidata lexeme dump
+  get_url:
+    url: https://dumps.wikimedia.org/wikidatawiki/entities/latestlexemes.json.gz
+    dest: /opt/entitybase/data/lexemes.json.gz
+    timeout: 3600
+  register: download_result
+  retries: 3
+  until: download_result is succeeded
+
+- name: Decompress lexeme dump
+  command: gunzip -f /opt/entitybase/data/lexemes.json.gz
+  args:
+    creates: /opt/entitybase/data/lexemes.json
+
+- name: Load lexemes into EntityBase
+  command: >
+    python3 -m entitybase load
+    --input /opt/entitybase/data/lexemes.json
+    --db-url "mysql://entitybase@{{ entitybase_mariadb_host }}/entitybase"
+  args:
+    chdir: /opt/entitybase
+  register: load_result
+  ignore_errors: yes
+
+- name: Print load result
+  debug:
+    var: load_result.stdout_lines
+  when: load_result is defined
