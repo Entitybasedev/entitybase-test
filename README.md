@@ -12,12 +12,12 @@ graph TB
             B2["backend-2\nc3-4"]
             B3["backend-3\nc3-4"]
             B4["backend-4\nc3-4"]
-            IMP["import\nc3-4"]
             DB["mariadb\nb3-16\n16GB RAM"]
         end
 
         LB["OVH Load Balancer\nOctavia :8080"]
         FIP["Floating IP"]
+        IMP["import\nc3-4"]
     end
 
     FIP --> LB
@@ -29,26 +29,7 @@ graph TB
     B2 -->|:3306| DB
     B3 -->|:3306| DB
     B4 -->|:3306| DB
-    IMP -->|"entitybase load\n(dump → MariaDB)"| DB
-
-    subgraph "Provisioning"
-        TOFU["OpenTofu"]
-        ANSIBLE["Ansible"]
-    end
-
-    TOFU -->|creates| LB
-    TOFU -->|creates| B1
-    TOFU -->|creates| B2
-    TOFU -->|creates| B3
-    TOFU -->|creates| B4
-    TOFU -->|creates| IMP
-    TOFU -->|creates| DB
-    ANSIBLE -->|configures| B1
-    ANSIBLE -->|configures| B2
-    ANSIBLE -->|configures| B3
-    ANSIBLE -->|configures| B4
-    ANSIBLE -->|configures| IMP
-    ANSIBLE -->|configures| DB
+    IMP -->|"entitybase load"| FIP
 ```
 
 ## Repository Structure
