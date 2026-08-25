@@ -17,12 +17,11 @@ usage() {
     echo ""
 }
 
-require_vars() {
-    if [[ -z "${TF_VAR_ovh_application_credential_id:-}" ]] || \
-       [[ -z "${TF_VAR_ovh_application_credential_secret:-}" ]]; then
-        echo "ERROR: Set OVH application credential environment variables:"
-        echo "  export TF_VAR_ovh_application_credential_id=..."
-        echo "  export TF_VAR_ovh_application_credential_secret=..."
+check_clouds_yaml() {
+    if [[ ! -f "$HOME/.config/openstack/clouds.yaml" ]] && \
+       [[ ! -f "./clouds.yaml" ]]; then
+        echo "ERROR: clouds.yaml not found."
+        echo "Expected at ~/.config/openstack/clouds.yaml or ./clouds.yaml"
         exit 1
     fi
 }

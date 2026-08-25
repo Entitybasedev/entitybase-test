@@ -1,6 +1,4 @@
-# OVH Application Credentials (set via environment variables or fill in below)
-# export TF_VAR_ovh_application_credential_id="..."
-# export TF_VAR_ovh_application_credential_secret="..."
+# Reads credentials from clouds.yaml (see README.md for setup)
 
 region          = "UK1"
 image           = "Ubuntu 24.04"

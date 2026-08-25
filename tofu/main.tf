@@ -10,10 +10,7 @@ terraform {
 }
 
 provider "openstack" {
-  auth_url                      = "https://auth.uk1.cloud.ovh.net/v3"
-  region                        = var.region
-  application_credential_id     = var.ovh_application_credential_id
-  application_credential_secret = var.ovh_application_credential_secret
+  cloud = "openstack"
 }
 
 # --- SSH Key ---

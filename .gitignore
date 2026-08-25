@@ -1,0 +1,5 @@
+clouds.yaml
+*.tfstate
+*.tfstate.backup
+.terraform/
+results/

@@ -1,15 +1,3 @@
-variable "ovh_application_credential_id" {
-  description = "OVH API application credential ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "ovh_application_credential_secret" {
-  description = "OVH API application credential secret"
-  type        = string
-  sensitive   = true
-}
-
 variable "region" {
   description = "OVH Public Cloud region"
   type        = string
