@@ -4,13 +4,16 @@
   apt:
     name: wget
     state: present
+  tags: [wikidata, items]
 
 - name: Create data directory
   file:
     path: /opt/entitybase-import/libs/entitybase-import/data
     state: directory
     mode: "0755"
+  tags: [wikidata, items]
 
+# Lexemes
 - name: Download Wikidata lexeme dump
   get_url:
     url: https://dumps.wikimedia.org/wikidatawiki/entities/latestlexemes.json.gz
@@ -19,6 +22,7 @@
   register: download_result
   retries: 3
   until: download_result is succeeded
+  tags: [wikidata]
 
 - name: Import lexemes into EntityBase
   command: >
@@ -29,8 +33,38 @@
     chdir: /opt/entitybase-import/libs/entitybase-import
   register: load_result
   ignore_errors: yes
+  tags: [wikidata]
 
 - name: Print load result
   debug:
     var: load_result.stdout_lines
   when: load_result is defined
+  tags: [wikidata]
+
+# Items (~150GB compressed)
+- name: Download Wikidata items dump
+  get_url:
+    url: https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz
+    dest: /opt/entitybase-import/libs/entitybase-import/data/items.json.gz
+    timeout: 86400
+  register: items_download_result
+  retries: 3
+  until: items_download_result is succeeded
+  tags: [items]
+
+- name: Import items into EntityBase
+  command: >
+    poetry run python -m src.cli import /opt/entitybase-import/libs/entitybase-import/data/items.json.gz
+    --host {{ entitybase_lb_host }}
+    --port 8080
+  args:
+    chdir: /opt/entitybase-import/libs/entitybase-import
+  register: items_load_result
+  ignore_errors: yes
+  tags: [items]
+
+- name: Print items load result
+  debug:
+    var: items_load_result.stdout_lines
+  when: items_load_result is defined
+  tags: [items]

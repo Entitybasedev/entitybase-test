@@ -82,6 +82,10 @@ cmd_up() {
     ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "wikidata"
 
     echo ""
+    echo "=== Loading Wikidata Items ==="
+    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "items"
+
+    echo ""
     echo "=== Starting Dashboard ==="
     ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "dashboard"
 

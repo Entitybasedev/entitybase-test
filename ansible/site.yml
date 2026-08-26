@@ -34,6 +34,13 @@
     - role: wikidata
       tags: [wikidata]
 
+- name: Wikidata Items
+  hosts: import
+  become: true
+  roles:
+    - role: wikidata
+      tags: [items]
+
 - name: Dashboard
   hosts: import
   become: true
