@@ -86,7 +86,7 @@ clouds:
     region_name: UK1
 ```
 
-2. Ensure your SSH public key exists at `tofu/id_rsa.pub`
+2. Ensure your SSH public key exists at `tofu/id_ed25519.pub`
 
 3. Edit `tofu/terraform.tfvars` for your configuration:
 

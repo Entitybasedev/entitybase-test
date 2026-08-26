@@ -1,6 +1,7 @@
 clouds.yaml
-id_rsa.pub
+id_ed25519.pub
 *.tfstate
 *.tfstate.backup
 .terraform/
+.terraform.lock.hcl
 results/

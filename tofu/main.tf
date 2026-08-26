@@ -17,7 +17,7 @@ provider "openstack" {
 
 resource "openstack_compute_keypair_v2" "ssh" {
   name       = var.ssh_key_name
-  public_key = file("${path.module}/id_rsa.pub")
+  public_key = file("${path.module}/id_ed25519.pub")
 }
 
 # --- Security Group ---
