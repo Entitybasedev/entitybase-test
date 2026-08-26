@@ -67,6 +67,7 @@ entitybase-test/
 
 - [OpenTofu](https://opentofu.org/) >= 1.5
 - [Ansible](https://www.ansible.com/)
+- [just](https://github.com/casey/just) (command runner)
 - [jq](https://stedolan.github.io/jq/)
 - OVH Public Cloud account
 - SSH key registered in OVH
@@ -102,17 +103,28 @@ mariadb_flavor  = "b3-16"
 ## Usage
 
 ```bash
-# Full run: provision + deploy + benchmark
-./run-test.sh up
+# Provision infrastructure
+just provision
 
-# Deploy only (infrastructure already exists)
-./run-test.sh deploy
+# Deploy EntityBase + load wikidata
+just deploy
+
+# Load wikidata lexemes only
+just lexemes
+
+# Load wikidata items only (~150GB, takes hours)
+just items
 
 # Check infrastructure status
-./run-test.sh status
+just status
+
+# SSH into instances
+just ssh-import
+just ssh-mariadb
+just ssh-backend 1
 
 # Tear down everything
-./run-test.sh destroy
+just destroy
 ```
 
 ## License
