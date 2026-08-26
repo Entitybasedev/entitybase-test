@@ -7,6 +7,13 @@ terraform {
       version = "~> 1.54"
     }
   }
+
+  # Uncomment and configure for remote state:
+  # backend "s3" {
+  #   bucket = "your-state-bucket"
+  #   key    = "entitybase-test/terraform.tfstate"
+  #   region = "uk1"
+  # }
 }
 
 provider "openstack" {
@@ -54,7 +61,7 @@ resource "openstack_networking_secgroup_rule_v2" "mariadb_in" {
   protocol          = "tcp"
   port_range_min    = 3306
   port_range_max    = 3306
-  remote_ip_prefix  = "0.0.0.0/0"
+  remote_ip_prefix  = "10.0.0.0/24"
 }
 
 resource "openstack_networking_secgroup_rule_v2" "entitybase_api_in" {
@@ -64,7 +71,7 @@ resource "openstack_networking_secgroup_rule_v2" "entitybase_api_in" {
   protocol          = "tcp"
   port_range_min    = 8000
   port_range_max    = 8000
-  remote_ip_prefix  = "0.0.0.0/0"
+  remote_ip_prefix  = "10.0.0.0/24"
 }
 
 resource "openstack_networking_secgroup_rule_v2" "dashboard_in" {
@@ -110,7 +117,7 @@ resource "openstack_networking_router_interface_v2" "entitybase" {
 }
 
 data "openstack_networking_network_v2" "external" {
-  name = "Ext-Net"
+  name = var.external_network_name
 }
 
 # --- Backend Instances ---
@@ -140,8 +147,8 @@ resource "openstack_compute_instance_v2" "backend" {
 }
 
 resource "openstack_networking_floatingip_v2" "backend" {
-  count  = var.backend_count
-  pool   = "Ext-Net"
+  count = var.backend_count
+  pool  = var.external_network_name
 }
 
 resource "openstack_networking_floatingip_associate_v2" "backend" {
@@ -172,10 +179,14 @@ resource "openstack_compute_instance_v2" "mariadb" {
   metadata = {
     role = "mariadb"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "openstack_networking_floatingip_v2" "mariadb" {
-  pool = "Ext-Net"
+  pool = var.external_network_name
 }
 
 resource "openstack_networking_floatingip_associate_v2" "mariadb" {
@@ -190,6 +201,10 @@ resource "openstack_blockstorage_volume_v3" "mariadb_data" {
   description = "Block storage for MariaDB data"
   size        = var.mariadb_storage_size
   volume_type = var.mariadb_storage_type
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "openstack_compute_volume_attach_v2" "mariadb_data" {
@@ -222,7 +237,7 @@ resource "openstack_compute_instance_v2" "import" {
 }
 
 resource "openstack_networking_floatingip_v2" "import" {
-  pool = "Ext-Net"
+  pool = var.external_network_name
 }
 
 resource "openstack_networking_floatingip_associate_v2" "import" {
@@ -247,8 +262,8 @@ resource "openstack_compute_volume_attach_v2" "import_data" {
 # --- OVH Load Balancer (Octavia) ---
 
 resource "openstack_lb_loadbalancer_v2" "entitybase" {
-  name              = "entitybase-lb"
-  vip_subnet_id     = openstack_networking_subnet_v2.entitybase.id
+  name               = "entitybase-lb"
+  vip_subnet_id      = openstack_networking_subnet_v2.entitybase.id
   security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
 }
 
@@ -269,7 +284,7 @@ resource "openstack_lb_pool_v2" "backend" {
 resource "openstack_lb_member_v2" "backend" {
   count         = var.backend_count
   pool_id       = openstack_lb_pool_v2.backend.id
-  address       = openstack_compute_instance_v2.backend[count.index].access_ip_v4
+  address       = openstack_networking_port_v2.backend[count.index].all_fixed_ips[0]
   protocol_port = 8000
   subnet_id     = openstack_networking_subnet_v2.entitybase.id
 }
@@ -288,7 +303,7 @@ resource "openstack_lb_monitor_v2" "backend" {
 # --- Floating IP for LB ---
 
 resource "openstack_networking_floatingip_v2" "lb" {
-  pool = "Ext-Net"
+  pool = var.external_network_name
 }
 
 resource "openstack_networking_floatingip_associate_v2" "lb" {

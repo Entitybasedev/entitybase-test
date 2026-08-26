@@ -74,19 +74,19 @@ logs:
 
 # Download lexeme dump (~600MB)
 download-lexemes:
-    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags wikidata
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags download-lexemes
 
 # Import lexemes into EntityBase
 import-lexemes:
-    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags wikidata
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags import-lexemes
 
 # Download items dump (~150GB)
 download-items:
-    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags items
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags download-items
 
 # Import items into EntityBase
 import-items:
-    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags items
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags import-items
 
 # Download and import lexemes
 lexemes: download-lexemes import-lexemes

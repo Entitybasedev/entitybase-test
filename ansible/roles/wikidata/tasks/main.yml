@@ -1,56 +1,12 @@
 ---
-# Wikidata role - downloads lexeme dump and loads into MariaDB
+# Wikidata role - downloads and imports Wikidata dumps
 
 # Import storage provisioning
-- name: Install storage utilities
-  apt:
-    name:
-      - parted
-      - e2fsprogs
-      - util-linux
-    state: present
-
-- name: Wait for block storage device to appear
-  wait_for:
-    path: /dev/vdb
-    timeout: 120
-
-- name: Check if volume is already partitioned
-  shell: lsblk -o NAME /dev/vdb | grep -c vdb1
-  register: partition_check
-  changed_when: false
-
-- name: Create GPT partition table
-  command: parted /dev/vdb mklabel gpt
-  when: partition_check.rc != 0
-
-- name: Create partition
-  command: parted /dev/vdb mkpart primary ext4 0% 100%
-  when: partition_check.rc != 0
-
-- name: Check if volume is already formatted
-  shell: blkid /dev/vdb1 | grep -c ext4
-  register: format_check
-  changed_when: false
-
-- name: Format volume as ext4
-  filesystem:
-    fstype: ext4
-    dev: /dev/vdb1
-  when: format_check.rc != 0
-
-- name: Create data directory
-  file:
-    path: /opt/entitybase-import/libs/entitybase-import/data
-    state: directory
-    mode: "0755"
-
-- name: Mount volume to data directory
-  mount:
-    path: /opt/entitybase-import/libs/entitybase-import/data
-    src: /dev/vdb1
-    fstype: ext4
-    state: mounted
+- name: Provision import storage
+  include_role:
+    name: storage
+  vars:
+    storage_mount_point: /opt/entitybase-import/libs/entitybase-import/data
 
 # Lexemes
 - name: Download Wikidata lexeme dump
@@ -61,7 +17,7 @@
   register: download_result
   retries: 3
   until: download_result is succeeded
-  tags: [wikidata]
+  tags: [wikidata, download-lexemes]
 
 - name: Import lexemes into EntityBase
   command: >
@@ -71,14 +27,13 @@
   args:
     chdir: /opt/entitybase-import/libs/entitybase-import
   register: load_result
-  ignore_errors: yes
-  tags: [wikidata]
+  tags: [wikidata, import-lexemes]
 
 - name: Print lexeme load result
   debug:
     var: load_result.stdout_lines
   when: load_result is defined
-  tags: [wikidata]
+  tags: [wikidata, import-lexemes]
 
 # Items (~150GB compressed)
 - name: Download Wikidata items dump
@@ -89,7 +44,7 @@
   register: items_download_result
   retries: 3
   until: items_download_result is succeeded
-  tags: [items]
+  tags: [items, download-items]
 
 - name: Import items into EntityBase
   command: >
@@ -99,11 +54,10 @@
   args:
     chdir: /opt/entitybase-import/libs/entitybase-import
   register: items_load_result
-  ignore_errors: yes
-  tags: [items]
+  tags: [items, import-items]
 
 - name: Print items load result
   debug:
     var: items_load_result.stdout_lines
   when: items_load_result is defined
-  tags: [items]
+  tags: [items, import-items]

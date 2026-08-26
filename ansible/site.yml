@@ -1,4 +1,20 @@
 ---
+# EntityBase Test Infrastructure Playbook
+#
+# Tag mapping:
+#   common        - Base packages and kernel tuning (all hosts)
+#   mariadb       - MariaDB setup with block storage (mariadb host)
+#   entitybase    - EntityBase backend installation (backend hosts)
+#   import        - EntityBase import host setup (import host)
+#   wikidata      - Download + import Wikidata lexemes (import host)
+#   download-lexemes - Download lexeme dump only (import host)
+#   import-lexemes   - Import lexemes only (import host)
+#   items         - Download + import Wikidata items (import host)
+#   download-items    - Download items dump only (import host)
+#   import-items      - Import items only (import host)
+#   dashboard     - Import progress dashboard (import host)
+#   benchmark     - Run performance benchmarks (backend hosts)
+
 - name: EntityBase Test Infrastructure
   hosts: all
   become: true
@@ -32,14 +48,7 @@
   become: true
   roles:
     - role: wikidata
-      tags: [wikidata]
-
-- name: Wikidata Items
-  hosts: import
-  become: true
-  roles:
-    - role: wikidata
-      tags: [items]
+      tags: [wikidata, download-lexemes, import-lexemes, items, download-items, import-items]
 
 - name: Dashboard
   hosts: import

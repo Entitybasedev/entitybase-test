@@ -4,6 +4,6 @@
     name: entitybase-dashboard
     state: restarted
 
-- name: daemon reload
+- name: dashboard daemon reload
   systemd:
     daemon_reload: yes

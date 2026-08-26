@@ -1,59 +1,10 @@
 ---
 # MariaDB storage provisioning (only on mariadb host)
-- name: Install storage utilities
-  apt:
-    name:
-      - parted
-      - e2fsprogs
-      - util-linux
-    state: present
-  when: "'mariadb' in group_names"
-
-- name: Wait for block storage device to appear
-  wait_for:
-    path: /dev/vdb
-    timeout: 120
-  when: "'mariadb' in group_names"
-
-- name: Check if volume is already partitioned
-  shell: lsblk -o NAME /dev/vdb | grep -c vdb1
-  register: partition_check
-  changed_when: false
-  when: "'mariadb' in group_names"
-
-- name: Create GPT partition table
-  command: parted /dev/vdb mklabel gpt
-  when: "'mariadb' in group_names" and partition_check.rc != 0
-
-- name: Create partition
-  command: parted /dev/vdb mkpart primary ext4 0% 100%
-  when: "'mariadb' in group_names" and partition_check.rc != 0
-
-- name: Check if volume is already formatted
-  shell: blkid /dev/vdb1 | grep -c ext4
-  register: format_check
-  changed_when: false
-  when: "'mariadb' in group_names"
-
-- name: Format volume as ext4
-  filesystem:
-    fstype: ext4
-    dev: /dev/vdb1
-  when: "'mariadb' in group_names" and format_check.rc != 0
-
-- name: Create mount point
-  file:
-    path: /data/mysql
-    state: directory
-    mode: "0755"
-  when: "'mariadb' in group_names"
-
-- name: Mount volume
-  mount:
-    path: /data/mysql
-    src: /dev/vdb1
-    fstype: ext4
-    state: mounted
+- name: Provision MariaDB storage
+  include_role:
+    name: storage
+  vars:
+    storage_mount_point: /data/mysql
   when: "'mariadb' in group_names"
 
 - name: Stop MariaDB before moving data
@@ -80,9 +31,9 @@
     force: yes
 
 - name: Install poetry
-  pip:
-    name: poetry
-    executable: pip3
+  shell: curl -sSL https://install.python-poetry.org | python3 -
+  args:
+    creates: /usr/local/bin/poetry
 
 - name: Install EntityBase dependencies
   command: poetry install --no-root
@@ -102,7 +53,7 @@
     dest: /etc/systemd/system/entitybase.service
     mode: "0644"
   notify:
-    - daemon reload
+    - entitybase daemon reload
     - restart entitybase
 
 - name: Enable and start entitybase service

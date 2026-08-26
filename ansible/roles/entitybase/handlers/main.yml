@@ -9,6 +9,6 @@
     name: entitybase
     state: restarted
 
-- name: daemon reload
+- name: entitybase daemon reload
   systemd:
     daemon_reload: yes

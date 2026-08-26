@@ -5,9 +5,14 @@ set -euo pipefail
 TOFU_DIR="tofu"
 ANSIBLE_DIR="ansible"
 RESULTS_DIR="results"
+INVENTORY="$ANSIBLE_DIR/inventory/hosts.ini"
+
+# Default flags
+SKIP_IMPORTS=false
+SKIP_BENCHMARK=false
 
 usage() {
-    echo "Usage: $0 [command]"
+    echo "Usage: $0 [command] [options]"
     echo ""
     echo "Commands:"
     echo "  up        Create infrastructure, deploy, and run tests"
@@ -15,6 +20,24 @@ usage() {
     echo "  destroy   Tear down all infrastructure"
     echo "  status    Show current infrastructure status"
     echo ""
+    echo "Options (for 'up' and 'deploy'):"
+    echo "  --skip-imports     Skip Wikidata download and import"
+    echo "  --skip-benchmark   Skip benchmark execution"
+    echo ""
+}
+
+require_vars() {
+    local missing=0
+    for cmd in tofu ansible-playbook jq; do
+        if ! command -v "$cmd" &>/dev/null; then
+            echo "ERROR: Required command '$cmd' not found in PATH."
+            missing=1
+        fi
+    done
+    if [[ $missing -eq 1 ]]; then
+        exit 1
+    fi
+    check_clouds_yaml
 }
 
 check_clouds_yaml() {
@@ -28,13 +51,13 @@ check_clouds_yaml() {
 
 generate_inventory() {
     echo "Generating Ansible inventory from tofu output..."
-    mkdir -p "$RESULTS_DIR"
+    mkdir -p "$RESULTS_DIR" "$ANSIBLE_DIR/inventory"
 
     local inventory
     inventory=$(cd "$TOFU_DIR" && tofu output -raw inventory)
 
-    echo "$inventory" > "$ANSIBLE_DIR/inventory/hosts.ini"
-    echo "Inventory written to $ANSIBLE_DIR/inventory/hosts.ini"
+    echo "$inventory" > "$INVENTORY"
+    echo "Inventory written to $INVENTORY"
 }
 
 wait_for_ssh() {
@@ -61,6 +84,11 @@ $(cd "$TOFU_DIR" && tofu output -raw import_ip)"
     done
 }
 
+run_playbook() {
+    local tags="$1"
+    ansible-playbook -i "$INVENTORY" "$ANSIBLE_DIR/site.yml" --tags "$tags"
+}
+
 cmd_up() {
     require_vars
 
@@ -75,23 +103,27 @@ cmd_up() {
 
     echo ""
     echo "=== Deploying EntityBase ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "common,entitybase,import"
+    run_playbook "common,entitybase,import"
 
-    echo ""
-    echo "=== Loading Wikidata ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "wikidata"
+    if [[ "$SKIP_IMPORTS" == false ]]; then
+        echo ""
+        echo "=== Loading Wikidata Lexemes ==="
+        run_playbook "wikidata"
 
-    echo ""
-    echo "=== Loading Wikidata Items ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "items"
+        echo ""
+        echo "=== Loading Wikidata Items ==="
+        run_playbook "items"
+    fi
 
     echo ""
     echo "=== Starting Dashboard ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "dashboard"
+    run_playbook "dashboard"
 
-    echo ""
-    echo "=== Running benchmarks ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "benchmark"
+    if [[ "$SKIP_BENCHMARK" == false ]]; then
+        echo ""
+        echo "=== Running benchmarks ==="
+        run_playbook "benchmark"
+    fi
 
     echo ""
     echo "=== Done ==="
@@ -109,7 +141,13 @@ cmd_deploy() {
     wait_for_ssh
 
     echo "=== Deploying ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "common,entitybase,import,wikidata,dashboard"
+    run_playbook "common,entitybase,import"
+
+    if [[ "$SKIP_IMPORTS" == false ]]; then
+        run_playbook "wikidata,items"
+    fi
+
+    run_playbook "dashboard"
 }
 
 cmd_destroy() {
@@ -126,6 +164,28 @@ cmd_status() {
     cd "$TOFU_DIR"
     tofu output
 }
+
+# Parse options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --skip-imports)
+            SKIP_IMPORTS=true
+            shift
+            ;;
+        --skip-benchmark)
+            SKIP_BENCHMARK=true
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            usage
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 case "${1:-}" in
     up)      cmd_up ;;

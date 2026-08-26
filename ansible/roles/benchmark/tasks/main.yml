@@ -14,16 +14,20 @@
   args:
     chdir: /opt/entitybase
   register: benchmark_result
-  ignore_errors: yes
+  failed_when: false
 
 - name: Print benchmark result
   debug:
     var: benchmark_result.stdout_lines
   when: benchmark_result is defined
 
+- name: Fail if benchmark failed
+  fail:
+    msg: "Benchmark failed with exit code {{ benchmark_result.rc }}: {{ benchmark_result.stderr_lines | default([]) | join('\n') }}"
+  when: benchmark_result.rc != 0
+
 - name: Fetch results to controller
   fetch:
     src: /opt/entitybase/results/benchmark.json
     dest: "{{ playbook_dir }}/../results/{{ inventory_hostname }}_benchmark.json"
     flat: yes
-  ignore_errors: yes

@@ -75,3 +75,9 @@ variable "entitybase_branch" {
   type        = string
   default     = "main"
 }
+
+variable "external_network_name" {
+  description = "Name of the external network for floating IPs"
+  type        = string
+  default     = "Ext-Net"
+}

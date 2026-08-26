@@ -8,9 +8,9 @@
     force: yes
 
 - name: Install poetry
-  pip:
-    name: poetry
-    executable: pip3
+  shell: curl -sSL https://install.python-poetry.org | python3 -
+  args:
+    creates: /usr/local/bin/poetry
 
 - name: Install entitybase-import dependencies
   command: poetry install --no-root
@@ -23,7 +23,7 @@
     dest: /etc/systemd/system/entitybase-dashboard.service
     mode: "0644"
   notify:
-    - daemon reload
+    - dashboard daemon reload
     - restart dashboard
 
 - name: Enable and start dashboard service

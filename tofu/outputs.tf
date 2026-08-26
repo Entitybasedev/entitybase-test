@@ -49,7 +49,7 @@ backend
 [all:vars]
 ansible_user=ubuntu
 ansible_python_interpreter=/usr/bin/python3
-entitybase_mariadb_host=${openstack_compute_instance_v2.mariadb.access_ip_v4}
+entitybase_mariadb_host=${openstack_networking_port_v2.mariadb.all_fixed_ips[0]}
 entitybase_lb_host=${openstack_networking_floatingip_v2.lb.address}
 EOT
 }

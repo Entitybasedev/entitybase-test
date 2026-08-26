@@ -1,0 +1,54 @@
+---
+# Shared storage provisioning role
+# Required variables: storage_mount_point
+# Optional variables: storage_device (default: /dev/vdb)
+
+- name: Install storage utilities
+  apt:
+    name:
+      - parted
+      - e2fsprogs
+      - util-linux
+    state: present
+
+- name: Wait for block storage device to appear
+  wait_for:
+    path: "{{ storage_device | default('/dev/vdb') }}"
+    timeout: 120
+
+- name: Check if volume is already partitioned
+  shell: "lsblk -o NAME {{ storage_device | default('/dev/vdb') }} | grep -c vdb1"
+  register: partition_check
+  changed_when: false
+
+- name: Create GPT partition table
+  command: "parted {{ storage_device | default('/dev/vdb') }} mklabel gpt"
+  when: partition_check.rc != 0
+
+- name: Create partition
+  command: "parted {{ storage_device | default('/dev/vdb') }} mkpart primary ext4 0% 100%"
+  when: partition_check.rc != 0
+
+- name: Check if volume is already formatted
+  shell: "blkid {{ storage_device | default('/dev/vdb') }}1 | grep -c ext4"
+  register: format_check
+  changed_when: false
+
+- name: Format volume as ext4
+  filesystem:
+    fstype: ext4
+    dev: "{{ storage_device | default('/dev/vdb') }}1"
+  when: format_check.rc != 0
+
+- name: Create mount point
+  file:
+    path: "{{ storage_mount_point }}"
+    state: directory
+    mode: "0755"
+
+- name: Mount volume
+  mount:
+    path: "{{ storage_mount_point }}"
+    src: "{{ storage_device | default('/dev/vdb') }}1"
+    fstype: ext4
+    state: mounted
