@@ -199,6 +199,20 @@ resource "openstack_networking_floatingip_associate_v2" "import" {
   port_id     = openstack_networking_port_v2.import.id
 }
 
+# --- Import Block Storage ---
+
+resource "openstack_blockstorage_volume_v3" "import_data" {
+  name        = "entitybase-import-data"
+  description = "Block storage for Wikidata dumps"
+  size        = var.import_storage_size
+  volume_type = var.import_storage_type
+}
+
+resource "openstack_compute_volume_attach_v2" "import_data" {
+  instance_id = openstack_compute_instance_v2.import.id
+  volume_id   = openstack_blockstorage_volume_v3.import_data.id
+}
+
 # --- OVH Load Balancer (Octavia) ---
 
 resource "openstack_lb_loadbalancer_v2" "entitybase" {

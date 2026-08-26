@@ -12,5 +12,8 @@ mariadb_storage_type = "classic"
 
 import_flavor = "c3-4"
 
+import_storage_size = 200
+import_storage_type = "classic"
+
 entitybase_repo   = "https://github.com/Entitybasedev/entitybase-orchestrator.git"
 entitybase_branch = "main"

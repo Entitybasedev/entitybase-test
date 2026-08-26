@@ -52,6 +52,18 @@ variable "import_flavor" {
   default     = "c3-4"
 }
 
+variable "import_storage_size" {
+  description = "Size of import block storage volume in GB"
+  type        = number
+  default     = 200
+}
+
+variable "import_storage_type" {
+  description = "OVH block storage type for import (classic, high-speed, high-speed-gen2)"
+  type        = string
+  default     = "classic"
+}
+
 variable "entitybase_repo" {
   description = "Git repository for EntityBase"
   type        = string

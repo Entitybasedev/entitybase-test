@@ -1,17 +1,56 @@
 ---
 # Wikidata role - downloads lexeme dump and loads into MariaDB
-- name: Install wget
+
+# Import storage provisioning
+- name: Install storage utilities
   apt:
-    name: wget
+    name:
+      - parted
+      - e2fsprogs
+      - util-linux
     state: present
-  tags: [wikidata, items]
+
+- name: Wait for block storage device to appear
+  wait_for:
+    path: /dev/vdb
+    timeout: 120
+
+- name: Check if volume is already partitioned
+  shell: lsblk -o NAME /dev/vdb | grep -c vdb1
+  register: partition_check
+  changed_when: false
+
+- name: Create GPT partition table
+  command: parted /dev/vdb mklabel gpt
+  when: partition_check.rc != 0
+
+- name: Create partition
+  command: parted /dev/vdb mkpart primary ext4 0% 100%
+  when: partition_check.rc != 0
+
+- name: Check if volume is already formatted
+  shell: blkid /dev/vdb1 | grep -c ext4
+  register: format_check
+  changed_when: false
+
+- name: Format volume as ext4
+  filesystem:
+    fstype: ext4
+    dev: /dev/vdb1
+  when: format_check.rc != 0
 
 - name: Create data directory
   file:
     path: /opt/entitybase-import/libs/entitybase-import/data
     state: directory
     mode: "0755"
-  tags: [wikidata, items]
+
+- name: Mount volume to data directory
+  mount:
+    path: /opt/entitybase-import/libs/entitybase-import/data
+    src: /dev/vdb1
+    fstype: ext4
+    state: mounted
 
 # Lexemes
 - name: Download Wikidata lexeme dump
