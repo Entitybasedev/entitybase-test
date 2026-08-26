@@ -7,5 +7,10 @@ backend_count   = 4
 backend_flavor  = "c3-4"
 mariadb_flavor  = "b3-16"
 
+mariadb_storage_size = 1024
+mariadb_storage_type = "classic"
+
+import_flavor = "c3-4"
+
 entitybase_repo   = "https://github.com/Entitybasedev/entitybase-orchestrator.git"
 entitybase_branch = "main"

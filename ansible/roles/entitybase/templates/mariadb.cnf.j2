@@ -1,6 +1,9 @@
 # MariaDB 11.4 - tuned for 16GB RAM
 
 [mysqld]
+# Data directory on block storage
+datadir = /data/mysql
+
 # InnoDB Performance (16GB RAM)
 innodb_buffer_pool_size = 12G
 innodb_buffer_pool_instances = 4

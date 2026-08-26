@@ -42,7 +42,8 @@ wait_for_ssh() {
     local hosts
     hosts=$(cd "$TOFU_DIR" && tofu output -json backend_ips | jq -r '.[]')
     hosts="$hosts
-$(cd "$TOFU_DIR" && tofu output -raw mariadb_ip)"
+$(cd "$TOFU_DIR" && tofu output -raw mariadb_ip)
+$(cd "$TOFU_DIR" && tofu output -raw import_ip)"
 
     for host in $hosts; do
         echo -n "  Waiting for $host..."
@@ -74,11 +75,15 @@ cmd_up() {
 
     echo ""
     echo "=== Deploying EntityBase ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "common,entitybase"
+    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "common,entitybase,import"
 
     echo ""
     echo "=== Loading Wikidata ==="
     ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "wikidata"
+
+    echo ""
+    echo "=== Starting Dashboard ==="
+    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "dashboard"
 
     echo ""
     echo "=== Running benchmarks ==="
@@ -86,9 +91,11 @@ cmd_up() {
 
     echo ""
     echo "=== Done ==="
-    local lb_ip
+    local lb_ip import_ip
     lb_ip=$(cd "$TOFU_DIR" && tofu output -raw lb_ip)
+    import_ip=$(cd "$TOFU_DIR" && tofu output -raw import_ip)
     echo "Load balancer: http://$lb_ip:8080"
+    echo "Dashboard: http://$import_ip"
     echo "Results saved in $RESULTS_DIR/"
 }
 
@@ -98,7 +105,7 @@ cmd_deploy() {
     wait_for_ssh
 
     echo "=== Deploying ==="
-    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "common,entitybase,wikidata"
+    ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.ini" "$ANSIBLE_DIR/site.yml" --tags "common,entitybase,import,wikidata,dashboard"
 }
 
 cmd_destroy() {

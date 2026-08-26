@@ -13,6 +13,16 @@ output "backend_ips" {
   value       = [for i in openstack_compute_instance_v2.backend : i.access_ip_v4]
 }
 
+output "import_ip" {
+  description = "Public IP of the import instance"
+  value       = openstack_networking_floatingip_v2.import.address
+}
+
+output "mariadb_volume_device" {
+  description = "Device path of the attached MariaDB data volume"
+  value       = openstack_compute_volume_attach_v2.mariadb_data.device
+}
+
 output "ssh_user" {
   description = "SSH user for all instances"
   value       = "ubuntu"
@@ -29,6 +39,9 @@ ${openstack_compute_instance_v2.mariadb.name} ansible_host=${openstack_compute_i
 %{for i, inst in openstack_compute_instance_v2.backend~}
 ${inst.name} ansible_host=${inst.access_ip_v4}
 %{endfor~}
+
+[import]
+${openstack_compute_instance_v2.import.name} ansible_host=${openstack_compute_instance_v2.import.access_ip_v4}
 
 [entitybase:children]
 backend

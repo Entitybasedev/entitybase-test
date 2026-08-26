@@ -20,12 +20,26 @@
     - role: entitybase
       tags: [entitybase]
 
+- name: Import Host Setup
+  hosts: import
+  become: true
+  roles:
+    - role: entitybase
+      tags: [import]
+
 - name: Wikidata
-  hosts: backend
+  hosts: import
   become: true
   roles:
     - role: wikidata
       tags: [wikidata]
+
+- name: Dashboard
+  hosts: import
+  become: true
+  roles:
+    - role: dashboard
+      tags: [dashboard]
 
 - name: Benchmark
   hosts: backend

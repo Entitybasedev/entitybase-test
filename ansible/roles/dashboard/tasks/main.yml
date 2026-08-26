@@ -1,0 +1,34 @@
+---
+# Dashboard role - starts the import progress dashboard
+- name: Clone entitybase-import repository
+  git:
+    repo: "{{ entitybase_import_repo | default('https://github.com/Entitybasedev/entitybase-orchestrator.git') }}"
+    dest: /opt/entitybase-import
+    version: "{{ entitybase_import_branch | default('main') }}"
+    force: yes
+
+- name: Install poetry
+  pip:
+    name: poetry
+    executable: pip3
+
+- name: Install entitybase-import dependencies
+  command: poetry install --no-root
+  args:
+    chdir: /opt/entitybase-import/libs/entitybase-import
+
+- name: Create dashboard systemd service
+  template:
+    src: dashboard.service.j2
+    dest: /etc/systemd/system/entitybase-dashboard.service
+    mode: "0644"
+  notify:
+    - daemon reload
+    - restart dashboard
+
+- name: Enable and start dashboard service
+  systemd:
+    name: entitybase-dashboard
+    state: started
+    enabled: yes
+    daemon_reload: yes

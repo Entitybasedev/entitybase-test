@@ -1,0 +1,14 @@
+[Unit]
+Description=EntityBase Import Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/entitybase-import/libs/entitybase-import
+ExecStart=/usr/bin/python3 -m src.cli dashboard --port 80
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

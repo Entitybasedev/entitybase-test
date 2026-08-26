@@ -1,0 +1,9 @@
+---
+- name: restart dashboard
+  systemd:
+    name: entitybase-dashboard
+    state: restarted
+
+- name: daemon reload
+  systemd:
+    daemon_reload: yes

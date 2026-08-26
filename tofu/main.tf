@@ -67,6 +67,16 @@ resource "openstack_networking_secgroup_rule_v2" "entitybase_api_in" {
   remote_ip_prefix  = "0.0.0.0/0"
 }
 
+resource "openstack_networking_secgroup_rule_v2" "dashboard_in" {
+  security_group_id = openstack_networking_secgroup_v2.entitybase.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 80
+  port_range_max    = 80
+  remote_ip_prefix  = "0.0.0.0/0"
+}
+
 resource "openstack_networking_secgroup_rule_v2" "icmp_in" {
   security_group_id = openstack_networking_secgroup_v2.entitybase.id
   direction         = "ingress"
@@ -140,6 +150,53 @@ resource "openstack_compute_instance_v2" "mariadb" {
   metadata = {
     role = "mariadb"
   }
+}
+
+# --- MariaDB Block Storage ---
+
+resource "openstack_blockstorage_volume_v3" "mariadb_data" {
+  name        = "entitybase-mariadb-data"
+  description = "Block storage for MariaDB data"
+  size        = var.mariadb_storage_size
+  volume_type = var.mariadb_storage_type
+}
+
+resource "openstack_compute_volume_attach_v2" "mariadb_data" {
+  instance_id = openstack_compute_instance_v2.mariadb.id
+  volume_id   = openstack_blockstorage_volume_v3.mariadb_data.id
+}
+
+# --- Import Instance ---
+
+resource "openstack_networking_port_v2" "import" {
+  name       = "entitybase-import-port"
+  network_id = openstack_networking_network_v2.entitybase.id
+
+  security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
+}
+
+resource "openstack_compute_instance_v2" "import" {
+  name        = "entitybase-import"
+  flavor_name = var.import_flavor
+  image_name  = var.image
+  key_pair    = openstack_compute_keypair_v2.ssh.name
+
+  network {
+    port = openstack_networking_port_v2.import.id
+  }
+
+  metadata = {
+    role = "import"
+  }
+}
+
+resource "openstack_networking_floatingip_v2" "import" {
+  pool = "Ext-Net"
+}
+
+resource "openstack_networking_floatingip_associate_v2" "import" {
+  floating_ip = openstack_networking_floatingip_v2.import.address
+  port_id     = openstack_networking_port_v2.import.id
 }
 
 # --- OVH Load Balancer (Octavia) ---

@@ -34,6 +34,24 @@ variable "mariadb_flavor" {
   default     = "b3-16"
 }
 
+variable "mariadb_storage_size" {
+  description = "Size of MariaDB block storage volume in GB"
+  type        = number
+  default     = 1024
+}
+
+variable "mariadb_storage_type" {
+  description = "OVH block storage type (classic, high-speed, high-speed-gen2)"
+  type        = string
+  default     = "classic"
+}
+
+variable "import_flavor" {
+  description = "Flavor for import instance (c3-4)"
+  type        = string
+  default     = "c3-4"
+}
+
 variable "entitybase_repo" {
   description = "Git repository for EntityBase"
   type        = string
