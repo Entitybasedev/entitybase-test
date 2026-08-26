@@ -1,14 +1,18 @@
 # entitybase-test - just commands
 
+set shell := ["bash", "-cu"]
+
 # List available commands
 default:
     @just --list
 
-# Full run: provision + deploy + benchmark
-up:
+# --- Infrastructure ---
+
+# Provision infrastructure (tofu apply + generate inventory)
+provision:
     ./run-test.sh up
 
-# Deploy only (infrastructure already exists)
+# Deploy only (assumes infrastructure exists)
 deploy:
     ./run-test.sh deploy
 
@@ -36,27 +40,63 @@ apply:
 inventory:
     ./run-test.sh inventory
 
+# SSH into import instance
+ssh-import:
+    ssh ubuntu@$(cd tofu && tofu output -raw import_ip)
+
+# SSH into mariadb instance
+ssh-mariadb:
+    ssh ubuntu@$(cd tofu && tofu output -raw mariadb_ip)
+
+# SSH into a backend instance
+ssh-backend n="1":
+    ssh ubuntu@$(cd tofu && tofu output -json backend_ips | jq -r '.[{{n - 1}}]')
+
+# --- Ansible ---
+
 # Run ansible playbook with specific tag
 playbook tag:
     ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags {{tag}}
 
-# SSH into a specific instance
-ssh host:
-    ssh ubuntu@$(cd tofu && tofu output -json {{host}}_ips 2>/dev/null | jq -r '.[0] // empty' || tofu output -raw {{host}}_ip)
+# Run benchmarks
+bench:
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags benchmark
+
+# Start dashboard
+dashboard:
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags dashboard
 
 # Tail logs on all backends
 logs:
     ansible all -i ansible/inventory/hosts.ini -m shell -a "journalctl -u entitybase -f --no-pager"
 
-# Run benchmarks only
-bench:
-    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags benchmark
+# --- Wikidata ---
 
-# Download wikidata dump only
-wikidata:
+# Download lexeme dump (~600MB)
+download-lexemes:
     ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags wikidata
 
-# fmt tofu files
+# Import lexemes into EntityBase
+import-lexemes:
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags wikidata
+
+# Download items dump (~150GB)
+download-items:
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags items
+
+# Import items into EntityBase
+import-items:
+    ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml --tags items
+
+# Download and import lexemes
+lexemes: download-lexemes import-lexemes
+
+# Download and import items (WARNING: ~150GB download, takes hours)
+items: download-items import-items
+
+# --- Utilities ---
+
+# Format tofu files
 fmt:
     cd tofu && tofu fmt
 
