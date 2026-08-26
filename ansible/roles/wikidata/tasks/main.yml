@@ -7,31 +7,26 @@
 
 - name: Create data directory
   file:
-    path: /opt/entitybase/data
+    path: /opt/entitybase-import/libs/entitybase-import/data
     state: directory
     mode: "0755"
 
 - name: Download Wikidata lexeme dump
   get_url:
     url: https://dumps.wikimedia.org/wikidatawiki/entities/latestlexemes.json.gz
-    dest: /opt/entitybase/data/lexemes.json.gz
+    dest: /opt/entitybase-import/libs/entitybase-import/data/lexemes.json.gz
     timeout: 3600
   register: download_result
   retries: 3
   until: download_result is succeeded
 
-- name: Decompress lexeme dump
-  command: gunzip -f /opt/entitybase/data/lexemes.json.gz
-  args:
-    creates: /opt/entitybase/data/lexemes.json
-
-- name: Load lexemes into EntityBase
+- name: Import lexemes into EntityBase
   command: >
-    python3 -m entitybase load
-    --input /opt/entitybase/data/lexemes.json
-    --db-url "mysql://entitybase@{{ entitybase_mariadb_host }}/entitybase"
+    poetry run python -m src.cli import /opt/entitybase-import/libs/entitybase-import/data/lexemes.json.gz
+    --host {{ entitybase_lb_host }}
+    --port 8080
   args:
-    chdir: /opt/entitybase
+    chdir: /opt/entitybase-import/libs/entitybase-import
   register: load_result
   ignore_errors: yes
 
