@@ -74,7 +74,7 @@
   ignore_errors: yes
   tags: [wikidata]
 
-- name: Print load result
+- name: Print lexeme load result
   debug:
     var: load_result.stdout_lines
   when: load_result is defined
