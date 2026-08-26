@@ -115,6 +115,14 @@ data "openstack_networking_network_v2" "external" {
 
 # --- Backend Instances ---
 
+resource "openstack_networking_port_v2" "backend" {
+  count      = var.backend_count
+  name       = "entitybase-backend-port-${count.index + 1}"
+  network_id = openstack_networking_network_v2.entitybase.id
+
+  security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
+}
+
 resource "openstack_compute_instance_v2" "backend" {
   count       = var.backend_count
   name        = "entitybase-backend-${count.index + 1}"
@@ -123,17 +131,33 @@ resource "openstack_compute_instance_v2" "backend" {
   key_pair    = openstack_compute_keypair_v2.ssh.name
 
   network {
-    uuid = openstack_networking_network_v2.entitybase.id
+    port = openstack_networking_port_v2.backend[count.index].id
   }
-
-  security_groups = [openstack_networking_secgroup_v2.entitybase.name]
 
   metadata = {
     role = "backend"
   }
 }
 
+resource "openstack_networking_floatingip_v2" "backend" {
+  count  = var.backend_count
+  pool   = "Ext-Net"
+}
+
+resource "openstack_networking_floatingip_associate_v2" "backend" {
+  count       = var.backend_count
+  floating_ip = openstack_networking_floatingip_v2.backend[count.index].address
+  port_id     = openstack_networking_port_v2.backend[count.index].id
+}
+
 # --- MariaDB Instance ---
+
+resource "openstack_networking_port_v2" "mariadb" {
+  name       = "entitybase-mariadb-port"
+  network_id = openstack_networking_network_v2.entitybase.id
+
+  security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
+}
 
 resource "openstack_compute_instance_v2" "mariadb" {
   name        = "entitybase-mariadb"
@@ -142,14 +166,21 @@ resource "openstack_compute_instance_v2" "mariadb" {
   key_pair    = openstack_compute_keypair_v2.ssh.name
 
   network {
-    uuid = openstack_networking_network_v2.entitybase.id
+    port = openstack_networking_port_v2.mariadb.id
   }
-
-  security_groups = [openstack_networking_secgroup_v2.entitybase.name]
 
   metadata = {
     role = "mariadb"
   }
+}
+
+resource "openstack_networking_floatingip_v2" "mariadb" {
+  pool = "Ext-Net"
+}
+
+resource "openstack_networking_floatingip_associate_v2" "mariadb" {
+  floating_ip = openstack_networking_floatingip_v2.mariadb.address
+  port_id     = openstack_networking_port_v2.mariadb.id
 }
 
 # --- MariaDB Block Storage ---

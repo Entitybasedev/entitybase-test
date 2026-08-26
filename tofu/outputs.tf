@@ -4,13 +4,13 @@ output "lb_ip" {
 }
 
 output "mariadb_ip" {
-  description = "Private IP of MariaDB instance"
-  value       = openstack_compute_instance_v2.mariadb.access_ip_v4
+  description = "Public IP of MariaDB instance"
+  value       = openstack_networking_floatingip_v2.mariadb.address
 }
 
 output "backend_ips" {
-  description = "Private IPs of backend instances"
-  value       = [for i in openstack_compute_instance_v2.backend : i.access_ip_v4]
+  description = "Public IPs of backend instances"
+  value       = [for i in openstack_networking_floatingip_v2.backend : i.address]
 }
 
 output "import_ip" {
@@ -33,15 +33,15 @@ output "inventory" {
   sensitive   = true
   value       = <<-EOT
 [mariadb]
-${openstack_compute_instance_v2.mariadb.name} ansible_host=${openstack_compute_instance_v2.mariadb.access_ip_v4}
+${openstack_compute_instance_v2.mariadb.name} ansible_host=${openstack_networking_floatingip_v2.mariadb.address}
 
 [backend]
 %{for i, inst in openstack_compute_instance_v2.backend~}
-${inst.name} ansible_host=${inst.access_ip_v4}
+${inst.name} ansible_host=${openstack_networking_floatingip_v2.backend[i].address}
 %{endfor~}
 
 [import]
-${openstack_compute_instance_v2.import.name} ansible_host=${openstack_compute_instance_v2.import.access_ip_v4}
+${openstack_compute_instance_v2.import.name} ansible_host=${openstack_networking_floatingip_v2.import.address}
 
 [entitybase:children]
 backend
