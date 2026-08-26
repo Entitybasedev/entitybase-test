@@ -50,7 +50,7 @@ ssh-mariadb:
 
 # SSH into a backend instance
 ssh-backend n="1":
-    ssh ubuntu@$(cd tofu && tofu output -json backend_ips | jq -r '.[{{n - 1}}]')
+    ssh ubuntu@$(cd tofu && tofu output -json backend_ips | jq -r '.[]' | sed -n '{{n}}p')
 
 # --- Ansible ---
 
