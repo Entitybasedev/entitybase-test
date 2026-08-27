@@ -16,6 +16,18 @@ variable "ssh_key_name" {
   default     = "entitybase-test"
 }
 
+variable "ssh_public_key" {
+  description = "OpenSSH public key material. When empty, falls back to tofu/id_ed25519.pub"
+  type        = string
+  default     = ""
+}
+
+variable "admin_cidr" {
+  description = "CIDR allowed to reach SSH (22), ICMP, the dashboard (80) and the LB (8080). Restrict to your own IP range."
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
 variable "backend_count" {
   description = "Number of EntityBase backend instances"
   type        = number

@@ -53,7 +53,7 @@ entitybase-test/
 5. Configure MariaDB 11.4 (16GB tuned)
 6. Download and load the Wikidata lexeme dump (import host only)
 7. Run measurements and collect results
-8. Optionally destroy the infrastructure
+8. Optionally tear down the infrastructure (instances first, volumes later)
 
 ## Instance Roles
 
@@ -123,7 +123,13 @@ just ssh-import
 just ssh-mariadb
 just ssh-backend 1
 
-# Tear down everything
+# Tear down in two steps: instances first, inspect the data, then volumes
+just teardown-instances
+# (MariaDB is stopped gracefully first, so the data volume needs no recovery)
+# ... inspect the retained volumes (OVH console / snapshots) ...
+just teardown-volumes
+
+# Or tear down everything in one go
 just destroy
 ```
 

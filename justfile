@@ -20,6 +20,14 @@ deploy:
 destroy:
     ./run-test.sh destroy
 
+# Tear down instances + LB + floating IPs, keep volumes for inspection
+teardown-instances:
+    ./run-test.sh teardown-instances
+
+# Tear down the data volumes (step 2, after teardown-instances)
+teardown-volumes:
+    ./run-test.sh teardown-volumes
+
 # Show infrastructure status
 status:
     ./run-test.sh status

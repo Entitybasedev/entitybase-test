@@ -20,11 +20,22 @@ provider "openstack" {
   cloud = "openstack"
 }
 
+locals {
+  ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : try(file("${path.module}/id_ed25519.pub"), "")
+}
+
 # --- SSH Key ---
 
 resource "openstack_compute_keypair_v2" "ssh" {
   name       = var.ssh_key_name
-  public_key = file("${path.module}/id_ed25519.pub")
+  public_key = local.ssh_public_key
+
+  lifecycle {
+    precondition {
+      condition     = local.ssh_public_key != ""
+      error_message = "No SSH public key available. Set var.ssh_public_key or create tofu/id_ed25519.pub."
+    }
+  }
 }
 
 # --- Security Group ---
@@ -41,7 +52,7 @@ resource "openstack_networking_secgroup_rule_v2" "ssh_in" {
   protocol          = "tcp"
   port_range_min    = 22
   port_range_max    = 22
-  remote_ip_prefix  = "0.0.0.0/0"
+  remote_ip_prefix  = var.admin_cidr
 }
 
 resource "openstack_networking_secgroup_rule_v2" "lb_http_in" {
@@ -51,7 +62,7 @@ resource "openstack_networking_secgroup_rule_v2" "lb_http_in" {
   protocol          = "tcp"
   port_range_min    = 8080
   port_range_max    = 8080
-  remote_ip_prefix  = "0.0.0.0/0"
+  remote_ip_prefix  = var.admin_cidr
 }
 
 resource "openstack_networking_secgroup_rule_v2" "mariadb_in" {
@@ -81,7 +92,7 @@ resource "openstack_networking_secgroup_rule_v2" "dashboard_in" {
   protocol          = "tcp"
   port_range_min    = 80
   port_range_max    = 80
-  remote_ip_prefix  = "0.0.0.0/0"
+  remote_ip_prefix  = var.admin_cidr
 }
 
 resource "openstack_networking_secgroup_rule_v2" "icmp_in" {
@@ -89,7 +100,7 @@ resource "openstack_networking_secgroup_rule_v2" "icmp_in" {
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "icmp"
-  remote_ip_prefix  = "0.0.0.0/0"
+  remote_ip_prefix  = var.admin_cidr
 }
 
 # --- Network (private for LB + backends) ---
@@ -144,6 +155,8 @@ resource "openstack_compute_instance_v2" "backend" {
   metadata = {
     role = "backend"
   }
+
+  depends_on = [openstack_networking_router_interface_v2.entitybase]
 }
 
 resource "openstack_networking_floatingip_v2" "backend" {
@@ -180,9 +193,7 @@ resource "openstack_compute_instance_v2" "mariadb" {
     role = "mariadb"
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  depends_on = [openstack_networking_router_interface_v2.entitybase]
 }
 
 resource "openstack_networking_floatingip_v2" "mariadb" {
@@ -201,10 +212,6 @@ resource "openstack_blockstorage_volume_v3" "mariadb_data" {
   description = "Block storage for MariaDB data"
   size        = var.mariadb_storage_size
   volume_type = var.mariadb_storage_type
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "openstack_compute_volume_attach_v2" "mariadb_data" {
@@ -234,6 +241,8 @@ resource "openstack_compute_instance_v2" "import" {
   metadata = {
     role = "import"
   }
+
+  depends_on = [openstack_networking_router_interface_v2.entitybase]
 }
 
 resource "openstack_networking_floatingip_v2" "import" {
@@ -265,6 +274,8 @@ resource "openstack_lb_loadbalancer_v2" "entitybase" {
   name               = "entitybase-lb"
   vip_subnet_id      = openstack_networking_subnet_v2.entitybase.id
   security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
+
+  depends_on = [openstack_networking_router_interface_v2.entitybase]
 }
 
 resource "openstack_lb_listener_v2" "http" {

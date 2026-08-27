@@ -15,10 +15,12 @@ usage() {
     echo "Usage: $0 [command] [options]"
     echo ""
     echo "Commands:"
-    echo "  up        Create infrastructure, deploy, and run tests"
-    echo "  deploy    Deploy only (assumes infrastructure exists)"
-    echo "  destroy   Tear down all infrastructure"
-    echo "  status    Show current infrastructure status"
+    echo "  up                  Create infrastructure, deploy, and run tests"
+    echo "  deploy              Deploy only (assumes infrastructure exists)"
+    echo "  teardown-instances  Stop MariaDB gracefully, destroy instances + LB + FIPs (keeps volumes)"
+    echo "  teardown-volumes    Destroy the data volumes (run after teardown-instances)"
+    echo "  destroy             Stop MariaDB gracefully (if reachable), tear down everything"
+    echo "  status              Show current infrastructure status"
     echo ""
     echo "Options (for 'up' and 'deploy'):"
     echo "  --skip-imports     Skip Wikidata download and import"
@@ -150,8 +152,50 @@ cmd_deploy() {
     run_playbook "dashboard"
 }
 
+stop_mariadb_gracefully() {
+    if [[ ! -f "$INVENTORY" ]]; then
+        echo "No inventory found; skipping graceful MariaDB shutdown"
+        return 0
+    fi
+    echo "=== Graceful MariaDB shutdown ==="
+    ansible-playbook -i "$INVENTORY" "$ANSIBLE_DIR/site.yml" --tags teardown-prep \
+        || echo "WARNING: graceful MariaDB shutdown failed; continuing teardown"
+}
+
+cmd_teardown_instances() {
+    require_vars
+    stop_mariadb_gracefully
+    echo "=== Tearing down instances, LB and floating IPs (volumes kept) ==="
+    cd "$TOFU_DIR"
+    tofu destroy -auto-approve \
+        -target=openstack_compute_instance_v2.backend \
+        -target=openstack_compute_instance_v2.mariadb \
+        -target=openstack_compute_instance_v2.import \
+        -target=openstack_lb_loadbalancer_v2.entitybase \
+        -target=openstack_networking_floatingip_v2.backend \
+        -target=openstack_networking_floatingip_v2.mariadb \
+        -target=openstack_networking_floatingip_v2.import \
+        -target=openstack_networking_floatingip_v2.lb
+    echo "Volumes retained for inspection:"
+    tofu state list | grep openstack_blockstorage_volume_v3 || echo "  (none)"
+    cd ..
+    echo "Instances destroyed. Data volumes are still attached to the project."
+}
+
+cmd_teardown_volumes() {
+    require_vars
+    echo "=== Tearing down data volumes ==="
+    cd "$TOFU_DIR"
+    tofu destroy -auto-approve \
+        -target=openstack_blockstorage_volume_v3.mariadb_data \
+        -target=openstack_blockstorage_volume_v3.import_data
+    cd ..
+    echo "Volumes destroyed."
+}
+
 cmd_destroy() {
     require_vars
+    stop_mariadb_gracefully
     echo "=== Destroying infrastructure ==="
     cd "$TOFU_DIR"
     tofu destroy -auto-approve
@@ -188,9 +232,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "${1:-}" in
-    up)      cmd_up ;;
-    deploy)  cmd_deploy ;;
-    destroy) cmd_destroy ;;
-    status)  cmd_status ;;
-    *)       usage ;;
+    up)                 cmd_up ;;
+    deploy)             cmd_deploy ;;
+    teardown-instances) cmd_teardown_instances ;;
+    teardown-volumes)   cmd_teardown_volumes ;;
+    destroy)            cmd_destroy ;;
+    status)             cmd_status ;;
+    *)                  usage ;;
 esac
