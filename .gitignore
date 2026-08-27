@@ -1,4 +1,5 @@
 clouds.yaml
+.env
 id_ed25519.pub
 *.tfstate
 *.tfstate.backup

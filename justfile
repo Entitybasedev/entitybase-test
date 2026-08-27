@@ -3,6 +3,7 @@
 # All orchestration lives here (formerly run-test.sh).
 
 set shell := ["bash", "-cu"]
+set dotenv-load := true
 
 export TOFU_DIR    := "tofu"
 export ANSIBLE_DIR := "ansible"
