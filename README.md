@@ -95,17 +95,41 @@ The justfile automates:
 
 ## Setup
 
-1. Place your `clouds.yaml` in `~/.config/openstack/` or the project root:
+1. Provide an OpenStack `clouds.yaml`. Any OpenStack-compatible provider works;
+   for OVH Public Cloud, the easiest route is via Horizon
+   (`horizon.cloud.ovh.net`, region-dependent):
 
-```yaml
-clouds:
-  openstack:
-    auth:
-      auth_url: https://auth.uk1.cloud.ovh.net/v3
-      application_credential_id: "YOUR_ID"
-      application_credential_secret: "YOUR_SECRET"
-    region_name: UK1
-```
+   - Log in and go to **Project → API Access**
+   - Click the **"Download OpenStack RC File"** dropdown and choose
+     **"OpenStack clouds.yaml File"**
+   - Alternatively, create an Application Credential
+     (**Identity → Application Credentials → Create Application Credential**)
+     and click **Download clouds.yaml** — this is the recommended option since
+     the credential can be revoked independently of your user password
+
+   Place the file in `~/.config/openstack/` (or the project root) with secure
+   permissions, e.g.:
+
+   ```bash
+   mkdir -p ~/.config/openstack
+   mv ~/Downloads/clouds.yaml ~/.config/openstack/clouds.yaml
+   chmod 600 ~/.config/openstack/clouds.yaml
+   ```
+
+   The tofu provider uses the cloud named `openstack`. If you downloaded
+   an application-credential file, ensure the cloud entry is named
+   `openstack` and uses `application_credential_id` /
+   `application_credential_secret`:
+
+   ```yaml
+   clouds:
+     openstack:
+       auth:
+         auth_url: https://auth.uk1.cloud.ovh.net/v3
+         application_credential_id: "YOUR_ID"
+         application_credential_secret: "YOUR_SECRET"
+       region_name: UK1
+   ```
 
 2. Ensure your SSH public key exists at `tofu/id_ed25519.pub`
 
