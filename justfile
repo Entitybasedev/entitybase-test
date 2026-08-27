@@ -222,15 +222,15 @@ init:
     cd tofu && tofu init
 
 # Plan infrastructure changes
-plan:
+plan: _require-vars
     cd tofu && tofu plan
 
 # Apply infrastructure changes
-apply:
+apply: _require-vars
     cd tofu && tofu apply
 
 # Generate Ansible inventory from tofu output
-inventory: _generate-inventory
+inventory: _require-vars _generate-inventory
 
 # --- SSH ---
 
