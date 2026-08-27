@@ -1,6 +1,6 @@
 ---
 # Observability defaults
-grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') or 'entitybase' }}"
+grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}"
 mysqld_exporter_password: "metrics-ro"
 
 # Loki endpoint (private IP of import host, set in inventory all:vars)

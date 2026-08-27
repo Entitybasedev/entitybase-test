@@ -1,8 +1,15 @@
 ---
-# Observability role - node_exporter + promtail (all), Prometheus/Loki/Grafana
+# Observability role - node_exporter + alloy (all), Prometheus/Loki/Grafana
 # (import), mysqld_exporter (mariadb). Self-hosted, no alerting.
 
-# --- Grafana APT repo (provides loki + promtail, absent from Ubuntu 24.04) ---
+- name: Assert grafana admin password is set
+  ansible.builtin.assert:
+    that: grafana_admin_password | length > 0
+    fail_msg: >-
+      GRAFANA_ADMIN_PASSWORD env var is not set
+      (export GRAFANA_ADMIN_PASSWORD=... before deploying observability)
+
+# --- Grafana APT repo (provides loki + alloy, absent from Ubuntu 24.04) ---
 
 - name: Install grafana GPG key
   get_url:

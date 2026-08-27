@@ -8,7 +8,7 @@ export TOFU_DIR    := "tofu"
 export ANSIBLE_DIR := "ansible"
 export RESULTS_DIR := "results"
 export INVENTORY   := ANSIBLE_DIR + "/inventory/hosts.ini"
-export GRAFANA_ADMIN_PASSWORD := env_var_or_default("GRAFANA_ADMIN_PASSWORD", "entitybase")
+export GRAFANA_ADMIN_PASSWORD := env_var_or_default("GRAFANA_ADMIN_PASSWORD", "")
 
 # List available commands
 default:
@@ -33,6 +33,19 @@ _require-vars:
     if [[ ! -f "$HOME/.config/openstack/clouds.yaml" && ! -f "./clouds.yaml" ]]; then
         echo "ERROR: clouds.yaml not found."
         echo "Expected at ~/.config/openstack/clouds.yaml or ./clouds.yaml"
+        missing=1
+    fi
+    if [[ -z "${GRAFANA_ADMIN_PASSWORD:-}" ]]; then
+        echo "ERROR: GRAFANA_ADMIN_PASSWORD is not set."
+        echo "  export GRAFANA_ADMIN_PASSWORD=... (Grafana UI at http://<import_ip>:3000)"
+        missing=1
+    fi
+    if [[ ! -s tofu/id_ed25519.pub && -z "${TF_VAR_ssh_public_key:-}" ]]; then
+        echo "ERROR: no SSH public key found."
+        echo "  Expected tofu/id_ed25519.pub (or set TF_VAR_ssh_public_key)."
+        missing=1
+    fi
+    if [[ $missing -eq 1 ]]; then
         exit 1
     fi
 
@@ -247,7 +260,7 @@ dashboard:
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dashboard
 
 # Deploy observability stack (Prometheus/Loki/Grafana on import, exporters on all)
-observability:
+observability: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags observability
 
 # Tail logs on all backends

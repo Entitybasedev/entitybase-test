@@ -50,7 +50,8 @@ ephemeral state — destroyed with `just destroy`):
 | Grafana Alloy | all hosts | Ships systemd journal + import logs to Loki |
 
 All traffic stays on the private network except Grafana on port 3000. Grafana
-admin password defaults to `entitybase`; override with `GRAFANA_ADMIN_PASSWORD`.
+admin password is read from `GRAFANA_ADMIN_PASSWORD` (required — `just provision`
+and `just observability` fail early if it is not set).
 
 ## Repository Structure
 
