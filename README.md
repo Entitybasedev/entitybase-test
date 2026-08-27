@@ -32,7 +32,7 @@ graph TB
     IMP -->|"bulk import"| FIP
     IMP -->|"scrape :9100/:9104, probe :8080"| B1
     IMP --> DB
-    B1 & B2 & B3 & B4 & DB -->|"promtail → :3100"| IMP
+    B1 & B2 & B3 & B4 & DB -->|"alloy → :3100"| IMP
 ```
 
 ### Observability
@@ -47,7 +47,7 @@ ephemeral state — destroyed with `just destroy`):
 | Grafana | import :3000 | Provisioned benchmark dashboard |
 | node_exporter | all hosts | CPU / RAM / disk / network |
 | mysqld_exporter | mariadb | MariaDB metrics (read-only `metrics` user) |
-| Promtail | all hosts | Ships systemd journal to Loki |
+| Grafana Alloy | all hosts | Ships systemd journal + import logs to Loki |
 
 All traffic stays on the private network except Grafana on port 3000. Grafana
 admin password defaults to `entitybase`; override with `GRAFANA_ADMIN_PASSWORD`.

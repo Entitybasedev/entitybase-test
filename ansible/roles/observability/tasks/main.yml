@@ -22,23 +22,23 @@
 
 # --- All hosts: node_exporter + promtail ---
 
-- name: Install node_exporter and promtail
+- name: Install node_exporter and alloy
   apt:
     name:
       - prometheus-node-exporter
-      - promtail
+      - alloy
     state: present
 
-- name: Deploy promtail config
+- name: Deploy alloy config
   template:
-    src: promtail.yml.j2
-    dest: /etc/promtail/config.yml
+    src: alloy.alloy.j2
+    dest: /etc/alloy/config.alloy
     mode: "0644"
-  notify: restart promtail
+  notify: restart alloy
 
-- name: Ensure promtail is running
+- name: Ensure alloy is running
   systemd:
-    name: promtail
+    name: alloy
     state: started
     enabled: yes
     daemon_reload: yes

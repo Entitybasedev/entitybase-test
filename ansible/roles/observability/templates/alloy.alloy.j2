@@ -1,0 +1,37 @@
+// Grafana Alloy - ships systemd journal + entitybase logs to Loki
+
+loki.write "default" {
+  endpoint {
+    url = "http://{{ loki_host }}:3100/loki/api/v1/push"
+  }
+}
+
+loki.source.journal "journal" {
+  max_age       = "12h"
+  relabel_rules = loki.relabel "journal_rules"
+  forward_to    = [loki.write.default.receiver]
+  labels        = { job = "systemd-journal", host = "{{ inventory_hostname }}" }
+}
+
+loki.relabel "journal_rules" {
+  forward_to = []
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+}
+
+local.file_match "entitybase_logs" {
+  path_targets = [
+    {
+      __path__ = "/var/log/entitybase/*.log"
+      job      = "varlogs"
+      host     = "{{ inventory_hostname }}"
+    },
+  ]
+}
+
+loki.source.file "entitybase_logs" {
+  targets    = local.file_match.entitybase_logs.targets
+  forward_to = [loki.write.default.receiver]
+}

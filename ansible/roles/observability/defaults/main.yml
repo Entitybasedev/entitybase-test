@@ -6,8 +6,9 @@ mysqld_exporter_password: "metrics-ro"
 # Loki endpoint (private IP of import host, set in inventory all:vars)
 loki_host: "{{ entitybase_loki_host | default(groups['import'][0]) }}"
 
-# Units whose journal logs are shipped to Loki
-promtail_journal_units:
+# Units whose journal logs are shipped to Loki (journal source captures all
+# units; kept for documentation/reference)
+alloy_journal_units:
   - entitybase
   - mariadb
   - entitybase-dashboard

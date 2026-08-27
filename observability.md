@@ -16,7 +16,7 @@ self-hosted on the import host, brought up with the infra via `just provision` /
 | Grafana          | import host | Dashboards (port 3000)                           |
 | node_exporter    | all hosts   | CPU / RAM / disk / network                       |
 | mysqld_exporter  | mariadb     | MariaDB metrics (read-only metrics user)         |
-| Promtail         | all hosts   | Ship journalctl (systemd units) to Loki          |
+| Grafana Alloy    | all hosts   | Ship journalctl (systemd units) to Loki (promtail successor) |
 
 All traffic stays on the private network (10.0.0.0/24) except the Grafana UI on
 port 3000. State is intentionally ephemeral — destroyed with `just destroy`; the
