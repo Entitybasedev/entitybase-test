@@ -29,7 +29,7 @@ graph TB
     B2 -->|:3306| DB
     B3 -->|:3306| DB
     B4 -->|:3306| DB
-    IMP -->|"entitybase load"| FIP
+    IMP -->|"bulk import"| FIP
     IMP -->|"scrape :9100/:9104, probe :8080"| B1
     IMP --> DB
     B1 & B2 & B3 & B4 & DB -->|"promtail → :3100"| IMP
@@ -80,7 +80,7 @@ The justfile automates:
 | Instance | Flavor | Role |
 |----------|--------|------|
 | backend-1..4 | c3-4 | EntityBase API server, behind LB |
-| import | c3-4 | Downloads dump + runs `entitybase load` |
+| import | c3-4 | Downloads dump + bulk import; Prometheus / Loki / Grafana |
 | mariadb | b3-16 | MariaDB 11.4 (16GB tuned) |
 
 ## Requirements
