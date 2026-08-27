@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+scrape_configs:
+  # node_exporter on all hosts
+  - job_name: node
+    static_configs:
+      - targets:
+{% for host in groups['all'] %}
+          - "{{ hostvars[host]['ansible_host'] }}:9100"
+{% endfor %}
+        labels:
+          cluster: entitybase-test
+
+  # mysqld_exporter on the mariadb host
+  - job_name: mariadb
+    static_configs:
+      - targets:
+          - "{{ hostvars[groups['mariadb'][0]]['ansible_host'] }}:9104"
+
+  # blackbox probe of the LB health endpoint
+  - job_name: lb_probe
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - "http://{{ entitybase_lb_host }}:8080/"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115

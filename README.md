@@ -17,7 +17,7 @@ graph TB
 
         LB["OVH Load Balancer\nOctavia :8080"]
         FIP["Floating IP"]
-        IMP["import\nc3-4"]
+        IMP["import\nc3-4\n+ Prometheus/Loki/Grafana"]
     end
 
     FIP --> LB
@@ -30,7 +30,27 @@ graph TB
     B3 -->|:3306| DB
     B4 -->|:3306| DB
     IMP -->|"entitybase load"| FIP
+    IMP -->|"scrape :9100/:9104, probe :8080"| B1
+    IMP --> DB
+    B1 & B2 & B3 & B4 & DB -->|"promtail → :3100"| IMP
 ```
+
+### Observability
+
+Self-hosted infra monitoring, deployed with the rest of the stack (no alerting,
+ephemeral state — destroyed with `just destroy`):
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Prometheus | import | Metrics scrape + storage |
+| Loki | import | Log aggregation (journal + import logs) |
+| Grafana | import :3000 | Provisioned benchmark dashboard |
+| node_exporter | all hosts | CPU / RAM / disk / network |
+| mysqld_exporter | mariadb | MariaDB metrics (read-only `metrics` user) |
+| Promtail | all hosts | Ships systemd journal to Loki |
+
+All traffic stays on the private network except Grafana on port 3000. Grafana
+admin password defaults to `entitybase`; override with `GRAFANA_ADMIN_PASSWORD`.
 
 ## Repository Structure
 
@@ -117,6 +137,9 @@ just items
 
 # Check infrastructure status
 just status
+
+# Deploy observability stack alone (Grafana at http://<import_ip>:3000)
+just observability
 
 # SSH into instances
 just ssh-import

@@ -52,6 +52,7 @@ ansible_python_interpreter=/usr/bin/python3
 ansible_ssh_common_args=-o StrictHostKeyChecking=accept-new
 entitybase_mariadb_host=${openstack_networking_port_v2.mariadb.all_fixed_ips[0]}
 entitybase_lb_host=${openstack_networking_floatingip_v2.lb.address}
+observability_loki_host=${openstack_networking_port_v2.import.all_fixed_ips[0]}
 EOT
   , "")
 }

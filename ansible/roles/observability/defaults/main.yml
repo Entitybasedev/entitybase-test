@@ -1,0 +1,17 @@
+---
+# Observability defaults
+grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') or 'entitybase' }}"
+mysqld_exporter_password: "metrics-ro"
+
+# Loki endpoint (private IP of import host, set in inventory all:vars)
+loki_host: "{{ entitybase_loki_host | default(groups['import'][0]) }}"
+
+# Units whose journal logs are shipped to Loki
+promtail_journal_units:
+  - entitybase
+  - mariadb
+  - entitybase-dashboard
+
+# Extra log files to ship (import/benchmark logs)
+promtail_log_files:
+  - /var/log/entitybase/*.log

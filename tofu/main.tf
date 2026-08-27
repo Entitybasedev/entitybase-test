@@ -95,6 +95,47 @@ resource "openstack_networking_secgroup_rule_v2" "dashboard_in" {
   remote_ip_prefix  = var.admin_cidr
 }
 
+resource "openstack_networking_secgroup_rule_v2" "grafana_in" {
+  security_group_id = openstack_networking_secgroup_v2.entitybase.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 3000
+  port_range_max    = 3000
+  remote_ip_prefix  = var.admin_cidr
+}
+
+# Observability (internal network only)
+resource "openstack_networking_secgroup_rule_v2" "node_exporter_in" {
+  security_group_id = openstack_networking_secgroup_v2.entitybase.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 9100
+  port_range_max    = 9100
+  remote_ip_prefix  = "10.0.0.0/24"
+}
+
+resource "openstack_networking_secgroup_rule_v2" "mysqld_exporter_in" {
+  security_group_id = openstack_networking_secgroup_v2.entitybase.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 9104
+  port_range_max    = 9104
+  remote_ip_prefix  = "10.0.0.0/24"
+}
+
+resource "openstack_networking_secgroup_rule_v2" "loki_in" {
+  security_group_id = openstack_networking_secgroup_v2.entitybase.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 3100
+  port_range_max    = 3100
+  remote_ip_prefix  = "10.0.0.0/24"
+}
+
 resource "openstack_networking_secgroup_rule_v2" "icmp_in" {
   security_group_id = openstack_networking_secgroup_v2.entitybase.id
   direction         = "ingress"

@@ -8,6 +8,7 @@ export TOFU_DIR    := "tofu"
 export ANSIBLE_DIR := "ansible"
 export RESULTS_DIR := "results"
 export INVENTORY   := ANSIBLE_DIR + "/inventory/hosts.ini"
+export GRAFANA_ADMIN_PASSWORD := env_var_or_default("GRAFANA_ADMIN_PASSWORD", "entitybase")
 
 # List available commands
 default:
@@ -112,6 +113,9 @@ _deploy-sequence *flags:
     echo ""
     echo "=== Starting Dashboard ==="
     run_playbook "dashboard"
+    echo ""
+    echo "=== Deploying Observability ==="
+    run_playbook "observability"
     if [[ "$skip_benchmark" == false ]]; then
         echo ""
         echo "=== Running benchmarks ==="
@@ -123,6 +127,7 @@ _deploy-sequence *flags:
     import_ip=$(cd "$TOFU_DIR" && tofu output -raw import_ip)
     echo "Load balancer: http://$lb_ip:8080"
     echo "Dashboard: http://$import_ip"
+    echo "Grafana: http://$import_ip:3000 (admin / $GRAFANA_ADMIN_PASSWORD)"
     echo "Results saved in $RESULTS_DIR/"
 
 # --- Infrastructure ---
@@ -240,6 +245,10 @@ bench:
 # Start dashboard
 dashboard:
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dashboard
+
+# Deploy observability stack (Prometheus/Loki/Grafana on import, exporters on all)
+observability:
+    ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags observability
 
 # Tail logs on all backends
 logs:

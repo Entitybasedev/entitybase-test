@@ -1,0 +1,98 @@
+{
+  "title": "EntityBase Benchmark",
+  "uid": "entitybase-benchmark",
+  "tags": ["entitybase"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "CPU (mariadb + backends)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "{{instance}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100 }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "RAM used %",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))", "legendFormat": "{{instance}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100 }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Disk used %",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "100 * (1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}))", "legendFormat": "{{instance}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100 }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "LB :8080 up",
+      "gridPos": { "x": 12, "y": 8, "w": 4, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "probe_success" }
+      ],
+      "fieldConfig": { "defaults": { "mappings": [ { "type": "value", "options": { "1": { "text": "UP", "color": "green" }, "0": { "text": "DOWN", "color": "red" } } } ] }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "MariaDB connections",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "mysql_global_status_threads_connected", "legendFormat": "connected" },
+        { "expr": "mysql_global_status_max_connections", "legendFormat": "max" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "InnoDB buffer pool",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "mysql_global_status_innodb_buffer_pool_read_requests", "legendFormat": "reads" },
+        { "expr": "mysql_global_status_innodb_buffer_pool_reads", "legendFormat": "disk reads" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Import throughput (network RX on import)",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(node_network_receive_bytes_total{device!~\"lo|.*\"}[5m])", "legendFormat": "{{instance}} {{device}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "type": "logs",
+      "title": "EntityBase logs",
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 10 },
+      "datasource": "Loki",
+      "targets": [
+        { "expr": "{job=~\"systemd-journal|varlogs\", unit=~\"entitybase|mariadb|entitybase-dashboard\"}", "refId": "A" }
+      ]
+    }
+  ]
+}

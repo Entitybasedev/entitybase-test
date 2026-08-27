@@ -1,0 +1,185 @@
+---
+# Observability role - node_exporter + promtail (all), Prometheus/Loki/Grafana
+# (import), mysqld_exporter (mariadb). Self-hosted, no alerting.
+
+# --- Grafana APT repo (provides loki + promtail, absent from Ubuntu 24.04) ---
+
+- name: Install grafana GPG key
+  get_url:
+    url: https://apt.grafana.com/gpg.key
+    dest: /etc/apt/keyrings/grafana.asc
+    mode: "0644"
+
+- name: Add grafana APT repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main"
+    filename: grafana
+    state: present
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+# --- All hosts: node_exporter + promtail ---
+
+- name: Install node_exporter and promtail
+  apt:
+    name:
+      - prometheus-node-exporter
+      - promtail
+    state: present
+
+- name: Deploy promtail config
+  template:
+    src: promtail.yml.j2
+    dest: /etc/promtail/config.yml
+    mode: "0644"
+  notify: restart promtail
+
+- name: Ensure promtail is running
+  systemd:
+    name: promtail
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+# --- MariaDB host: metrics user + mysqld_exporter ---
+
+- name: Create read-only MariaDB metrics user
+  shell: |
+    mysql <<'EOF'
+    CREATE USER IF NOT EXISTS 'metrics'@'localhost' IDENTIFIED BY '{{ mysqld_exporter_password }}';
+    GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'metrics'@'localhost';
+    FLUSH PRIVILEGES;
+    EOF
+  changed_when: true
+  when: "'mariadb' in group_names"
+
+- name: Install mysqld_exporter
+  apt:
+    name: prometheus-mysqld-exporter
+    state: present
+  when: "'mariadb' in group_names"
+
+- name: Deploy mysqld_exporter credentials
+  template:
+    src: mysqld-exporter.cnf.j2
+    dest: /etc/mysql/mysqld_exporter.cnf
+    mode: "0600"
+  when: "'mariadb' in group_names"
+  notify: restart mysqld_exporter
+
+- name: Configure mysqld_exporter data source
+  copy:
+    dest: /etc/default/prometheus-mysqld-exporter
+    content: |
+      ARGS="--config.my-cnf=/etc/mysql/mysqld_exporter.cnf"
+    mode: "0644"
+  when: "'mariadb' in group_names"
+  notify: restart mysqld_exporter
+
+- name: Ensure mysqld_exporter is running
+  systemd:
+    name: prometheus-mysqld-exporter
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  when: "'mariadb' in group_names"
+
+# --- Import host: Prometheus, Loki, Grafana, blackbox exporter ---
+
+- name: Install server components
+  apt:
+    name:
+      - prometheus
+      - prometheus-blackbox-exporter
+      - loki
+      - grafana
+    state: present
+  when: "'import' in group_names"
+
+- name: Deploy prometheus config
+  template:
+    src: prometheus.yml.j2
+    dest: /etc/prometheus/prometheus.yml
+    mode: "0644"
+  when: "'import' in group_names"
+  notify: restart prometheus
+
+- name: Deploy loki config
+  template:
+    src: loki.yml.j2
+    dest: /etc/loki/config.yml
+    mode: "0644"
+  when: "'import' in group_names"
+  notify: restart loki
+
+- name: Create grafana datasource provisioning directory
+  file:
+    path: /etc/grafana/provisioning/datasources
+    state: directory
+    mode: "0755"
+  when: "'import' in group_names"
+
+- name: Create grafana dashboard provisioning directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /etc/grafana/provisioning/dashboards
+    - /var/lib/grafana/dashboards
+  when: "'import' in group_names"
+
+- name: Deploy grafana datasources
+  template:
+    src: grafana-datasources.yml.j2
+    dest: /etc/grafana/provisioning/datasources/observability.yml
+    mode: "0644"
+  when: "'import' in group_names"
+  notify: restart grafana
+
+- name: Deploy grafana dashboard provider
+  copy:
+    dest: /etc/grafana/provisioning/dashboards/observability.yml
+    content: |
+      apiVersion: 1
+      providers:
+        - name: observability
+          orgId: 1
+          folder: EntityBase
+          type: file
+          options:
+            path: /var/lib/grafana/dashboards
+    mode: "0644"
+  when: "'import' in group_names"
+  notify: restart grafana
+
+- name: Deploy benchmark dashboard
+  template:
+    src: benchmark-dashboard.json.j2
+    dest: /var/lib/grafana/dashboards/benchmark.json
+    mode: "0644"
+  when: "'import' in group_names"
+  notify: restart grafana
+
+- name: Configure grafana admin credentials
+  lineinfile:
+    path: /etc/grafana/grafana.ini
+    regexp: '^;?admin_password\s*='
+    line: "admin_password = {{ grafana_admin_password }}"
+  when: "'import' in group_names"
+  notify: restart grafana
+
+- name: Ensure server components are running
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  loop:
+    - prometheus
+    - prometheus-blackbox-exporter
+    - loki
+    - grafana-server
+  when: "'import' in group_names"
