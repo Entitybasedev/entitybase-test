@@ -38,13 +38,13 @@ graph TB
 entitybase-test/
 ├── tofu/           # OpenTofu IaC for OVH infrastructure
 ├── ansible/        # Configuration and deployment playbooks
-├── run-test.sh     # End-to-end test orchestration
+├── justfile        # End-to-end test orchestration (run `just --list`)
 └── clouds.yaml     # OVH credentials (not committed)
 ```
 
 ## What It Does
 
-`run-test.sh` automates:
+The justfile automates:
 
 1. Create OVH infrastructure via OpenTofu (4 backends + import + MariaDB + LB)
 2. Wait for SSH connectivity
