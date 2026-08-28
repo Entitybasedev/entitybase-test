@@ -7,6 +7,15 @@
     storage_mount_point: /data/mysql
   when: "'mariadb' in group_names"
 
+- name: Install MariaDB server
+  apt:
+    name:
+      - mariadb-server
+      - mariadb-client
+    state: present
+    update_cache: yes
+  when: "'mariadb' in group_names"
+
 - name: Stop MariaDB before moving data
   systemd:
     name: mariadb
@@ -20,6 +29,27 @@
       cp -a /var/lib/mysql/* /data/mysql/
       rm -rf /var/lib/mysql/*
     fi
+  when: "'mariadb' in group_names"
+
+- name: Deploy MariaDB tuning config
+  template:
+    src: mariadb.cnf.j2
+    dest: /etc/mysql/mariadb.conf.d/99-entitybase.cnf
+    mode: "0644"
+  when: "'mariadb' in group_names"
+  notify: restart mariadb
+
+- name: Initialize MariaDB data directory if empty
+  shell: mariadb-install-db --datadir=/data/mysql --user=mysql
+  args:
+    creates: /data/mysql/mysql/ibdata1
+  when: "'mariadb' in group_names"
+
+- name: Enable and start MariaDB
+  systemd:
+    name: mariadb
+    state: started
+    enabled: yes
   when: "'mariadb' in group_names"
 
 # EntityBase backend role - installs from source with poetry
