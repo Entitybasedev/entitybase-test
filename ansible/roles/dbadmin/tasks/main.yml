@@ -26,6 +26,10 @@
     msg: "No php-fpm socket found in /run/php/"
   when: php_fpm_socket.stdout | length == 0
 
+- name: Set php-fpm socket fact
+  set_fact:
+    php_fpm_socket: "{{ php_fpm_socket.stdout }}"
+
 - name: Create Adminer web root
   file:
     path: /var/www/adminer
@@ -67,10 +71,6 @@
     path: /etc/nginx/sites-enabled/default
     state: absent
   notify: reload nginx
-
-- name: Set php-fpm socket fact
-  set_fact:
-    php_fpm_socket: "{{ php_fpm_socket.stdout }}"
 
 - name: Find php-fpm service unit
   shell: systemctl list-unit-files 'php*-fpm*.service' --no-legend | awk '{print $1}' | head -n1
