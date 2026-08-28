@@ -3,12 +3,13 @@ global:
   evaluation_interval: 30s
 
 scrape_configs:
-  # node_exporter on all hosts
+  # node_exporter on all hosts (private IPs; security group only allows
+  # 9100 from the internal 10.0.0.0/24 net)
   - job_name: node
     static_configs:
       - targets:
 {% for host in groups['all'] %}
-          - "{{ hostvars[host]['ansible_host'] }}:9100"
+          - "{{ hostvars[host]['node_ip'] }}:9100"
 {% endfor %}
         labels:
           cluster: entitybase-test
@@ -17,7 +18,7 @@ scrape_configs:
   - job_name: mariadb
     static_configs:
       - targets:
-          - "{{ hostvars[groups['mariadb'][0]]['ansible_host'] }}:9104"
+          - "{{ hostvars[groups['mariadb'][0]]['node_ip'] }}:9104"
 
   # blackbox probe of the LB health endpoint
   - job_name: lb_probe
