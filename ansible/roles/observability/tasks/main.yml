@@ -108,8 +108,19 @@
       - prometheus
       - prometheus-blackbox-exporter
       - loki
-      - grafana
+      - "grafana={{ grafana_version }}"
     state: present
+    allow_downgrade: yes
+  when: "'import' in group_names"
+
+- name: Pin grafana to major version 12
+  copy:
+    dest: /etc/apt/preferences.d/grafana
+    content: |
+      Package: grafana
+      Pin: version 12.*
+      Pin-Priority: 1001
+    mode: "0644"
   when: "'import' in group_names"
 
 - name: Deploy prometheus config

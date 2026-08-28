@@ -11,7 +11,7 @@
 # Lexemes
 - name: Download Wikidata lexeme dump
   get_url:
-    url: https://dumps.wikimedia.org/wikidatawiki/entities/latestlexemes.json.gz
+    url: https://dumps.wikimedia.org/wikidatawiki/entities/latest-lexemes.json.gz
     dest: /opt/entitybase-import/libs/entitybase-import/data/lexemes.json.gz
     timeout: 3600
   register: download_result

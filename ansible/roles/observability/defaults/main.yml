@@ -1,6 +1,9 @@
 ---
 # Observability defaults
 grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}"
+# Grafana 13 silently ignores classic file-based dashboard provisioning;
+# pin to 12.x until dashboards are migrated to the v2 provisioning format
+grafana_version: "12.*"
 mysqld_exporter_password: "metrics-ro"
 
 # Loki endpoint (private IP of import host, set in inventory all:vars)
