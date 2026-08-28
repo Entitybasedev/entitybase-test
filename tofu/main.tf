@@ -161,10 +161,11 @@ resource "openstack_networking_network_v2" "entitybase" {
 }
 
 resource "openstack_networking_subnet_v2" "entitybase" {
-  name       = "entitybase-subnet"
-  network_id = openstack_networking_network_v2.entitybase.id
-  cidr       = "10.0.0.0/24"
-  ip_version = 4
+  name            = "entitybase-subnet"
+  network_id      = openstack_networking_network_v2.entitybase.id
+  cidr            = "10.0.0.0/24"
+  ip_version      = 4
+  dns_nameservers = ["1.1.1.1", "8.8.8.8"]
 }
 
 resource "openstack_networking_router_v2" "entitybase" {
