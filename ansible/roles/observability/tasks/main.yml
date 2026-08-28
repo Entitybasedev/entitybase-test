@@ -27,7 +27,7 @@
   apt:
     update_cache: yes
 
-# --- All hosts: node_exporter + promtail ---
+# --- All hosts: node_exporter + alloy ---
 
 - name: Install node_exporter and alloy
   apt:
@@ -52,9 +52,15 @@
 
 # --- MariaDB host: metrics user + mysqld_exporter ---
 
+- name: Install mariadb-client
+  apt:
+    name: mariadb-client
+    state: present
+  when: "'mariadb' in group_names"
+
 - name: Create read-only MariaDB metrics user
   shell: |
-    mysql <<'EOF'
+    mariadb <<'EOF'
     CREATE USER IF NOT EXISTS 'metrics'@'localhost' IDENTIFIED BY '{{ mysqld_exporter_password }}';
     GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'metrics'@'localhost';
     FLUSH PRIVILEGES;

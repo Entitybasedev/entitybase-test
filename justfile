@@ -109,19 +109,17 @@ _stop-mariadb:
     ansible-playbook -i "$INVENTORY" "$ANSIBLE_DIR/site.yml" --tags teardown-prep \
         || echo "WARNING: graceful MariaDB shutdown failed; continuing teardown"
 
-# Deploy EntityBase + optional imports + dashboard + benchmark
+# Deploy EntityBase + optional imports + dashboard
 _deploy-sequence *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     skip_imports=false
-    skip_benchmark=false
     set -- {{flags}}
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --skip-imports)   skip_imports=true ;;
-            --skip-benchmark) skip_benchmark=true ;;
             *) echo "Unknown option: $1"
-               echo "Usage: just up|deploy [--skip-imports] [--skip-benchmark]"
+               echo "Usage: just up|deploy [--skip-imports]"
                exit 1 ;;
         esac
         shift
@@ -146,11 +144,6 @@ _deploy-sequence *flags:
     echo ""
     echo "=== Deploying Observability ==="
     run_playbook "observability"
-    if [[ "$skip_benchmark" == false ]]; then
-        echo ""
-        echo "=== Running benchmarks ==="
-        run_playbook "benchmark"
-    fi
     echo ""
     echo "=== Done ==="
     lb_ip=$(cd "$TOFU_DIR" && tofu output -raw lb_ip)
@@ -313,10 +306,6 @@ ssh-backend n="1":
 playbook tag: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags {{tag}}
 
-# Run benchmarks
-bench: _require-vars
-    ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags benchmark
-
 # Start dashboard
 dashboard: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dashboard
@@ -324,6 +313,10 @@ dashboard: _require-vars
 # Deploy Adminer (dbadmin)
 dbadmin: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dbadmin
+
+# Deploy observability (Prometheus/Loki/Grafana)
+observability: _require-vars
+    ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags observability
 
 # Tail logs on all backends
 logs:

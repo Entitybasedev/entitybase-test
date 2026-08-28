@@ -16,7 +16,6 @@
 #   dashboard     - Import progress dashboard (import host)
 #   dbadmin       - Adminer web DB UI on :8081, basic auth (import host)
 #   observability - Prometheus/Loki/Grafana + exporters (all hosts)
-#   benchmark     - Run performance benchmarks (backend hosts)
 #   teardown-prep - Graceful MariaDB shutdown before teardown (tagged 'never',
 #                   so it only runs when explicitly selected via --tags)
 
@@ -75,13 +74,6 @@
   roles:
     - role: observability
       tags: [observability]
-
-- name: Benchmark
-  hosts: backend
-  become: true
-  roles:
-    - role: benchmark
-      tags: [benchmark]
 
 - name: Graceful MariaDB shutdown
   hosts: mariadb

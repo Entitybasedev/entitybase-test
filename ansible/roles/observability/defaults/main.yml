@@ -13,6 +13,6 @@ alloy_journal_units:
   - mariadb
   - entitybase-dashboard
 
-# Extra log files to ship (import/benchmark logs)
-promtail_log_files:
+# Extra log files to ship (import logs)
+alloy_log_files:
   - /var/log/entitybase/*.log
