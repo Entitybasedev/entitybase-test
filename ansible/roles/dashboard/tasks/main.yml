@@ -2,7 +2,7 @@
 # Dashboard role - starts the import progress dashboard
 - name: Clone entitybase-import repository
   git:
-    repo: "{{ entitybase_import_repo | default('https://github.com/Entitybasedev/entitybase-orchestrator.git') }}"
+    repo: "{{ entitybase_import_repo | default('https://github.com/dpriskorn/entitybase-import.git') }}"
     dest: /opt/entitybase-import
     version: "{{ entitybase_import_branch | default('main') }}"
     force: yes
@@ -10,12 +10,19 @@
 - name: Install poetry
   shell: curl -sSL https://install.python-poetry.org | python3 -
   args:
-    creates: /usr/local/bin/poetry
+    creates: /root/.local/bin/poetry
+
+- name: Symlink poetry onto PATH
+  file:
+    src: /root/.local/bin/poetry
+    dest: /usr/local/bin/poetry
+    state: link
+    force: yes
 
 - name: Install entitybase-import dependencies
-  command: poetry install --no-root
+  command: /usr/local/bin/poetry install --no-root
   args:
-    chdir: /opt/entitybase-import/libs/entitybase-import
+    chdir: /opt/entitybase-import
 
 - name: Create dashboard systemd service
   template:
