@@ -14,6 +14,7 @@
       - mariadb-client
     state: present
     update_cache: yes
+    cache_valid_time: 3600
   when: "'mariadb' in group_names"
 
 - name: Stop MariaDB before moving data
@@ -61,13 +62,13 @@
     force: yes
 
 - name: Install poetry
-  shell: curl -sSL https://install.python-poetry.org | python3 -
+  shell: curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python3 -
   args:
-    creates: /root/.local/bin/poetry
+    creates: /opt/poetry/bin/poetry
 
 - name: Symlink poetry onto PATH
   file:
-    src: /root/.local/bin/poetry
+    src: /opt/poetry/bin/poetry
     dest: /usr/local/bin/poetry
     state: link
     force: yes
