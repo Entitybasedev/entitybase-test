@@ -33,10 +33,17 @@
 - name: Install poetry
   shell: curl -sSL https://install.python-poetry.org | python3 -
   args:
-    creates: /usr/local/bin/poetry
+    creates: /root/.local/bin/poetry
+
+- name: Symlink poetry onto PATH
+  file:
+    src: /root/.local/bin/poetry
+    dest: /usr/local/bin/poetry
+    state: link
+    force: yes
 
 - name: Install EntityBase dependencies
-  command: poetry install --no-root
+  command: /usr/local/bin/poetry install --no-root
   args:
     chdir: /opt/entitybase
 
