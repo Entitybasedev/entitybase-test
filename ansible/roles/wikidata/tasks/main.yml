@@ -7,6 +7,7 @@
     name: storage
   vars:
     storage_mount_point: /opt/entitybase-import/libs/entitybase-import/data
+  tags: [wikidata, download-lexemes, import-lexemes, items, download-items, import-items]
 
 # Lexemes
 - name: Download Wikidata lexeme dump

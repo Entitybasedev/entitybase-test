@@ -45,7 +45,6 @@
   become: true
   roles:
     - role: wikidata
-      tags: [wikidata, download-lexemes, import-lexemes, items, download-items, import-items]
 
 - name: Dashboard
   hosts: import
