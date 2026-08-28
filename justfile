@@ -321,6 +321,10 @@ bench: _require-vars
 dashboard: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dashboard
 
+# Deploy Adminer (dbadmin)
+dbadmin: _require-vars
+    ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dbadmin
+
 # Tail logs on all backends
 logs:
     ansible all -i {{INVENTORY}} -m shell -a "journalctl -u entitybase -f --no-pager"

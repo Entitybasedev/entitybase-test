@@ -72,6 +72,16 @@
   set_fact:
     php_fpm_socket: "{{ php_fpm_socket.stdout }}"
 
+- name: Find php-fpm service unit
+  shell: systemctl list-unit-files 'php*-fpm*.service' --no-legend | awk '{print $1}' | head -n1
+  register: php_fpm_service
+  changed_when: false
+
+- name: Fail if no php-fpm service found
+  fail:
+    msg: "No php*-fpm systemd service found"
+  when: php_fpm_service.stdout | length == 0
+
 - name: Ensure nginx is enabled and running
   systemd:
     name: nginx
@@ -80,6 +90,6 @@
 
 - name: Ensure php-fpm is enabled and running
   systemd:
-    name: "{{ php_fpm_socket | basename | regex_replace('-fpm.sock$', '-fpm') }}"
+    name: "{{ php_fpm_service.stdout }}"
     state: started
     enabled: true
