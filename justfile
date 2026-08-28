@@ -49,7 +49,14 @@ _require-vars:
     fi
     if [[ ! -s tofu/id_ed25519.pub && -z "${TF_VAR_ssh_public_key:-}" ]]; then
         echo "ERROR: no SSH public key found."
-        echo "  Expected tofu/id_ed25519.pub (or set TF_VAR_ssh_public_key)."
+        echo "  Symlink your key into the repo: ln -s ~/.ssh/<key>.pub tofu/id_ed25519.pub"
+        echo "  (or set TF_VAR_ssh_public_key)"
+        missing=1
+    fi
+    if [[ ! -s tofu/id_ed25519 ]]; then
+        echo "ERROR: no SSH private key found."
+        echo "  Symlink your key into the repo: ln -s ~/.ssh/<key> tofu/id_ed25519"
+        echo "  (Ansible uses it via ansible.cfg to connect to the instances)"
         missing=1
     fi
     if [[ $missing -eq 1 ]]; then
@@ -78,7 +85,7 @@ _wait-for-ssh:
     for host in "${hosts[@]}"; do
         echo -n "  Waiting for $host..."
         for i in $(seq 1 60); do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@"$host" true 2>/dev/null; then
+            if ssh -i "$TOFU_DIR/id_ed25519" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@"$host" true 2>/dev/null; then
                 echo " ready"
                 break
             fi

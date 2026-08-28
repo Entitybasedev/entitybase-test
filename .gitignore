@@ -1,6 +1,7 @@
 clouds.yaml
 .env
 id_ed25519.pub
+id_ed25519
 *.tfstate
 *.tfstate.backup
 .terraform/
