@@ -35,6 +35,55 @@ graph TB
     B1 & B2 & B3 & B4 & DB -->|"alloy → :3100"| IMP
 ```
 
+### How it works, in words
+
+The stack is a classic three-tier benchmark rig, plus an operator's
+workstation node, on one private OpenStack network.
+
+**Traffic path.** All benchmark traffic enters through an **Octavia load
+balancer** that owns the only public entry point (a floating IP, HTTP on
+:8080). It round-robins requests to N identical **EntityBase backend** nodes,
+each running the API server on :8000. The backends are stateless — every read
+and write goes to a single shared **MariaDB 11.4** server on the private
+network (:3306, reachable only from inside the 10.0.0.0/24 net). The benchmark
+therefore measures how hard the database layer can be pushed while scaling the
+API tier horizontally.
+
+**The database node** is deliberately oversized (b3-16, 16 GB RAM) and its
+data lives on a dedicated Cinder volume mounted at `/data/mysql`, with InnoDB
+tuned for the available memory. Splitting the database onto its own instance
+and volume means it can be stopped gracefully and its volume snapshotted,
+inspected, or reused independently of the compute — which is exactly how the
+two-step teardown (`teardown-instances` → `teardown-volumes`) works.
+
+**The import node** does two jobs:
+
+1. *Bulk data loading.* It downloads the Wikidata dumps onto its own large
+   Cinder volume and streams them through the public load balancer into
+   EntityBase, exercising the same API path clients would use. It also hosts
+   a small Python progress dashboard on :80 so you can watch the import in
+   real time.
+2. *Observability.* It runs the self-hosted monitoring stack: Prometheus
+   (scrapes `node_exporter` on every host and `mysqld_exporter` on the
+   database), Loki (log aggregation), and Grafana on :3000 with a
+   pre-provisioned benchmark dashboard. Every host ships its systemd journal
+   to Loki via Grafana Alloy. Prometheus also blackbox-probes the API through
+   the load balancer.
+
+**Security posture.** Everything except SSH, the load balancer (:8080), the
+dashboard (:80), Grafana (:3000) and Adminer (:8081) is locked to the private
+network, and those public ports are additionally restricted to the admin CIDR
+in the OpenStack security group. All service traffic (API→DB, metric scrapes,
+log shipping) stays on 10.0.0.0/24 and never crosses the internet.
+
+**Adminer**, a small web DB UI deployed on the import node (:8081, HTTP basic
+auth), lets you browse the MariaDB data during and after imports. It connects
+over the private network to the database, so no database port is ever exposed
+publicly.
+
+Run `just infra` at any time to print the live map of instances, IPs, ports
+and credentials.
+
 ### Observability
 
 Self-hosted infra monitoring, deployed with the rest of the stack (no alerting,
