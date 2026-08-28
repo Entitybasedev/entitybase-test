@@ -7,6 +7,30 @@
     version: "{{ entitybase_import_branch | default('main') }}"
     force: yes
 
+- name: Install Python 3.13
+  apt:
+    name:
+      - python3.13
+      - python3.13-venv
+    state: present
+  register: py313
+  failed_when: false
+
+- name: Add deadsnakes PPA
+  apt_repository:
+    repo: ppa:deadsnakes/ppa
+    state: present
+  when: py313 is failed
+
+- name: Install Python 3.13 (deadsnakes)
+  apt:
+    name:
+      - python3.13
+      - python3.13-venv
+    state: present
+    update_cache: yes
+  when: py313 is failed
+
 - name: Install poetry
   shell: curl -sSL https://install.python-poetry.org | python3 -
   args:
@@ -20,7 +44,7 @@
     force: yes
 
 - name: Install entitybase-import dependencies
-  command: /usr/local/bin/poetry install --no-root
+  shell: /usr/local/bin/poetry env use /usr/bin/python3.13 && /usr/local/bin/poetry install --no-root
   args:
     chdir: /opt/entitybase-import
 
