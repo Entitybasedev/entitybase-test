@@ -15,7 +15,7 @@ server {
 
     location ~ \.php$ {
         include fastcgi_params;
-        fastcgi_pass unix:{{ php_fpm_socket.stdout }};
+        fastcgi_pass unix:{{ php_fpm_socket.stdout | default(php_fpm_socket) }};
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     }
 }
