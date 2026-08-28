@@ -77,11 +77,13 @@
   args:
     chdir: /opt/entitybase
 
+# EntityBase backend service - only on backend hosts
 - name: Deploy entitybase env config
   template:
     src: entitybase.env.j2
     dest: /opt/entitybase/.env
     mode: "0600"
+  when: "'backend' in group_names"
   notify: restart entitybase
 
 - name: Create systemd service for entitybase
@@ -89,6 +91,7 @@
     src: entitybase.service.j2
     dest: /etc/systemd/system/entitybase.service
     mode: "0644"
+  when: "'backend' in group_names"
   notify:
     - entitybase daemon reload
     - restart entitybase
@@ -99,3 +102,4 @@
     state: started
     enabled: yes
     daemon_reload: yes
+  when: "'backend' in group_names"

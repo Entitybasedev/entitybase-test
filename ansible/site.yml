@@ -4,7 +4,7 @@
 # Tag mapping:
 #   common        - Base packages and kernel tuning (all hosts; tagged 'always',
 #                   so it runs on every invocation, including --tags <x>)
-#   mariadb       - MariaDB setup with block storage (mariadb host)
+#   mariadb       - (reserved) MariaDB-only tasks (mariadb host)
 #   entitybase    - EntityBase backend installation (backend hosts)
 #   import        - EntityBase import host setup (import host)
 #   wikidata      - Download + import Wikidata lexemes (import host)
@@ -25,13 +25,6 @@
   roles:
     - role: common
       tags: [common, always]
-
-- name: MariaDB Setup
-  hosts: mariadb
-  become: true
-  roles:
-    - role: entitybase
-      tags: [mariadb]
 
 - name: EntityBase Backends
   hosts: backend
