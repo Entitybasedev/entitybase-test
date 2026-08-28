@@ -1,7 +1,8 @@
 ---
 # Shared storage provisioning role
 # Required variables: storage_mount_point
-# Optional variables: storage_device (default: /dev/vdb)
+# Optional variables: storage_device (auto-detected as the largest unmounted
+# disk if not set)
 
 - name: Install storage utilities
   apt:
@@ -11,33 +12,51 @@
       - util-linux
     state: present
 
+- name: Detect unmounted data disk
+  shell: |
+    root_disk=$(lsblk -dpno PKNAME "$(findmnt -no SOURCE /)")
+    lsblk -dpno NAME,TYPE,MOUNTPOINT | awk -v root="$root_disk" '$2=="disk" && $3=="" && $1!=root {print $1}' | tail -n1
+  register: detected_device
+  changed_when: false
+
+- name: Set storage device fact
+  set_fact:
+    storage_device_final: "{{ storage_device | default(detected_device.stdout) }}"
+
+- name: Fail if no data disk found
+  fail:
+    msg: "No unmounted data disk found (set storage_device explicitly)"
+  when: storage_device_final | length == 0
+
 - name: Wait for block storage device to appear
   wait_for:
-    path: "{{ storage_device | default('/dev/vdb') }}"
+    path: "{{ storage_device_final }}"
     timeout: 120
 
 - name: Check if volume is already partitioned
-  shell: "lsblk -o NAME {{ storage_device | default('/dev/vdb') }} | grep -c vdb1"
+  shell: "lsblk -o NAME {{ storage_device_final }} | grep -c $(basename {{ storage_device_final }})1"
   register: partition_check
   changed_when: false
+  failed_when: false
 
 - name: Create GPT partition table
-  command: "parted {{ storage_device | default('/dev/vdb') }} mklabel gpt"
+  command: "parted {{ storage_device_final }} mklabel gpt"
   when: partition_check.rc != 0
 
 - name: Create partition
-  command: "parted {{ storage_device | default('/dev/vdb') }} mkpart primary ext4 0% 100%"
+  command: "parted {{ storage_device_final }} mkpart primary ext4 0% 100%"
   when: partition_check.rc != 0
 
 - name: Check if volume is already formatted
-  shell: "blkid {{ storage_device | default('/dev/vdb') }}1 | grep -c ext4"
+  shell: "blkid {{ storage_device_final }}1 | grep -c ext4"
   register: format_check
   changed_when: false
+  failed_when: false
 
 - name: Format volume as ext4
   filesystem:
     fstype: ext4
-    dev: "{{ storage_device | default('/dev/vdb') }}1"
+    dev: "{{ storage_device_final }}1"
   when: format_check.rc != 0
 
 - name: Create mount point
@@ -49,6 +68,6 @@
 - name: Mount volume
   mount:
     path: "{{ storage_mount_point }}"
-    src: "{{ storage_device | default('/dev/vdb') }}1"
+    src: "{{ storage_device_final }}1"
     fstype: ext4
     state: mounted
