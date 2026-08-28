@@ -171,14 +171,14 @@ provision *flags:
 # Alias: just up == just provision
 alias up := provision
 
-# Deploy only (assumes infrastructure exists)
+# Deploy EntityBase backends + dashboard + observability (no data imports)
 deploy *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     just _require-vars
     just _generate-inventory
     just _wait-for-ssh
-    just _deploy-sequence {{flags}}
+    just _deploy-sequence --skip-imports {{flags}}
 
 # Stop MariaDB gracefully, destroy instances + LB + FIPs (keeps volumes)
 teardown-instances:
@@ -313,10 +313,6 @@ bench: _require-vars
 # Start dashboard
 dashboard: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dashboard
-
-# Deploy observability stack (Prometheus/Loki/Grafana on import, exporters on all)
-observability: _require-vars
-    ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags observability
 
 # Tail logs on all backends
 logs:

@@ -100,7 +100,7 @@ ephemeral state — destroyed with `just destroy`):
 
 All traffic stays on the private network except Grafana on port 3000. Grafana
 admin password is read from `GRAFANA_ADMIN_PASSWORD` (required — `just provision`
-and `just observability` fail early if it is not set).
+and `just deploy` fail early if it is not set).
 
 ## Repository Structure
 
@@ -211,9 +211,6 @@ just items
 
 # Check infrastructure status
 just status
-
-# Deploy observability stack alone (Grafana at http://<import_ip>:3000)
-just observability
 
 # SSH into instances
 just ssh-import
