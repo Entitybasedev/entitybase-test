@@ -1,0 +1,85 @@
+---
+# Adminer web UI (nginx + php-fpm) on the import host, port 8081,
+# protected by HTTP basic auth. Talks to MariaDB on the internal net.
+
+- name: Fail fast if DBADMIN_PASSWORD is not set
+  fail:
+    msg: "DBADMIN_PASSWORD is not set. Export it (basic auth for Adminer at :8081)."
+  when: dbadmin_password | length == 0
+
+- name: Install nginx and PHP
+  apt:
+    name:
+      - nginx
+      - php-fpm
+      - php-mysql
+    state: present
+    update_cache: true
+
+- name: Determine php-fpm socket path
+  shell: ls /run/php/php*-fpm.sock 2>/dev/null | sort -V | tail -n1
+  register: php_fpm_socket
+  changed_when: false
+
+- name: Fail if no php-fpm socket found
+  fail:
+    msg: "No php-fpm socket found in /run/php/"
+  when: php_fpm_socket.stdout | length == 0
+
+- name: Create Adminer web root
+  file:
+    path: /var/www/adminer
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Adminer
+  get_url:
+    url: "https://www.adminer.org/latest.php"
+    dest: /var/www/adminer/index.php
+    mode: "0644"
+  notify: reload nginx
+
+- name: Install python passlib for htpasswd
+  apt:
+    name: python3-passlib
+    state: present
+
+- name: Create htpasswd file for basic auth
+  htpasswd:
+    path: /etc/nginx/adminer.htpasswd
+    name: dbadmin
+    password: "{{ dbadmin_password }}"
+    owner: root
+    group: www-data
+    mode: "0640"
+  no_log: true
+
+- name: Deploy nginx vhost for Adminer
+  template:
+    src: adminer.conf.j2
+    dest: /etc/nginx/conf.d/adminer.conf
+  notify: reload nginx
+
+- name: Remove default nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Set php-fpm socket fact
+  set_fact:
+    php_fpm_socket: "{{ php_fpm_socket.stdout }}"
+
+- name: Ensure nginx is enabled and running
+  systemd:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Ensure php-fpm is enabled and running
+  systemd:
+    name: "{{ php_fpm_socket | basename | regex_replace('-fpm.sock$', '-fpm') }}"
+    state: started
+    enabled: true

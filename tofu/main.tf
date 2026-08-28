@@ -105,6 +105,16 @@ resource "openstack_networking_secgroup_rule_v2" "grafana_in" {
   remote_ip_prefix  = var.admin_cidr
 }
 
+resource "openstack_networking_secgroup_rule_v2" "dbadmin_in" {
+  security_group_id = openstack_networking_secgroup_v2.entitybase.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 8081
+  port_range_max    = 8081
+  remote_ip_prefix  = var.admin_cidr
+}
+
 # Observability (internal network only)
 resource "openstack_networking_secgroup_rule_v2" "node_exporter_in" {
   security_group_id = openstack_networking_secgroup_v2.entitybase.id

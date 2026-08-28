@@ -1,0 +1,3 @@
+---
+# Password for HTTP basic auth on the Adminer UI (:8081)
+dbadmin_password: "{{ dbadmin_password_env | default(lookup('env', 'DBADMIN_PASSWORD')) }}"

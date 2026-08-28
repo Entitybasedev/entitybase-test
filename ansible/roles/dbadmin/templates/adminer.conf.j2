@@ -1,0 +1,21 @@
+server {
+    listen 8081;
+    listen [::]:8081;
+    server_name _;
+
+    root /var/www/adminer;
+    index index.php;
+
+    auth_basic "EntityBase DB Admin";
+    auth_basic_user_file /etc/nginx/adminer.htpasswd;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass unix:{{ php_fpm_socket }};
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}

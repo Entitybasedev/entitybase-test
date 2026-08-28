@@ -10,6 +10,7 @@ export ANSIBLE_DIR := "ansible"
 export RESULTS_DIR := "results"
 export INVENTORY   := ANSIBLE_DIR + "/inventory/hosts.ini"
 export GRAFANA_ADMIN_PASSWORD := env_var_or_default("GRAFANA_ADMIN_PASSWORD", "")
+export DBADMIN_PASSWORD := env_var_or_default("DBADMIN_PASSWORD", "")
 
 # List available commands
 default:
@@ -39,6 +40,11 @@ _require-vars:
     if [[ -z "${GRAFANA_ADMIN_PASSWORD:-}" ]]; then
         echo "ERROR: GRAFANA_ADMIN_PASSWORD is not set."
         echo "  export GRAFANA_ADMIN_PASSWORD=... (Grafana UI at http://<import_ip>:3000)"
+        missing=1
+    fi
+    if [[ -z "${DBADMIN_PASSWORD:-}" ]]; then
+        echo "ERROR: DBADMIN_PASSWORD is not set."
+        echo "  export DBADMIN_PASSWORD=... (basic auth for Adminer at http://<import_ip>:8081)"
         missing=1
     fi
     if [[ ! -s tofu/id_ed25519.pub && -z "${TF_VAR_ssh_public_key:-}" ]]; then
@@ -128,6 +134,9 @@ _deploy-sequence *flags:
     echo "=== Starting Dashboard ==="
     run_playbook "dashboard"
     echo ""
+    echo "=== Deploying Adminer ==="
+    run_playbook "dbadmin"
+    echo ""
     echo "=== Deploying Observability ==="
     run_playbook "observability"
     if [[ "$skip_benchmark" == false ]]; then
@@ -142,6 +151,8 @@ _deploy-sequence *flags:
     echo "Load balancer: http://$lb_ip:8080"
     echo "Dashboard: http://$import_ip"
     echo "Grafana: http://$import_ip:3000 (admin / $GRAFANA_ADMIN_PASSWORD)"
+    echo "Adminer: http://$import_ip:8081 (dbadmin / $DBADMIN_PASSWORD)"
+    echo "Infra map: just infra"
     echo "Results saved in $RESULTS_DIR/"
 
 # --- Infrastructure ---
@@ -217,6 +228,49 @@ status:
     just _require-vars
     (cd "$TOFU_DIR" && tofu output)
 
+# Print a map of all instances: IPs, ports, services and how to reach them
+infra:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! (cd "$TOFU_DIR" && tofu output -json backend_ips &>/dev/null); then
+        echo "No infrastructure state found."
+        echo "Run 'just provision' first, then retry 'just infra'."
+        exit 1
+    fi
+    backend_ips=$(cd "$TOFU_DIR" && tofu output -json backend_ips | jq -r '.[]')
+    mapfile -t backends <<< "$backend_ips"
+    lb_ip=$(cd "$TOFU_DIR" && tofu output -raw lb_ip)
+    mariadb_ip=$(cd "$TOFU_DIR" && tofu output -raw mariadb_ip)
+    import_ip=$(cd "$TOFU_DIR" && tofu output -raw import_ip)
+    mariadb_host=$(cd "$TOFU_DIR" && tofu output -raw mariadb_ip)
+    n=${#backends[@]}
+    line() { printf '%s\n' "$(printf '%.0s-' {1..72})"; }
+    line
+    printf '%-14s %-16s %-16s %s\n' "INSTANCE" "PUBLIC IP" "PRIVATE ROLE" "ACCESS"
+    line
+    printf '%-14s %-16s %-16s %s\n' "entitybase-lb" "$lb_ip" "load balancer" "http://$lb_ip:8080 (API)"
+    for i in "${!backends[@]}"; do
+        b=${backends[$i]}
+        printf '%-14s %-16s %-16s %s\n' "backend-$((i+1))/$n" "$b" "entitybase API" "just ssh-backend $((i+1))"
+    done
+    printf '%-14s %-16s %-16s %s\n' "entitybase-mariadb" "$mariadb_ip" "MariaDB 11.4" ":3306 internal - just ssh-mariadb"
+    printf '%-14s %-16s %-16s %s\n' "entitybase-import" "$import_ip" "import/dashboard" "just ssh-import"
+    line
+    echo "Services (import node):"
+    echo "  Dashboard:   http://$import_ip          (python dashboard)"
+    echo "  Grafana:     http://$import_ip:3000     (admin / \$GRAFANA_ADMIN_PASSWORD)"
+    echo "  Adminer:     http://$import_ip:8081     (dbadmin / \$DBADMIN_PASSWORD)"
+    echo "  Prometheus:  http://$import_ip:9090     (internal)"
+    echo "  Loki:        http://$import_ip:3100     (internal)"
+    echo "Database: MariaDB on $mariadb_ip:3306 (internal net only)"
+    echo "  DB: entitybase, user: entitybase (no password from internal net)"
+    echo "  From import node: mysql -h $mariadb_ip -u entitybase entitybase"
+    echo "  Web UI: Adminer at http://$import_ip:8081 (server: $mariadb_ip, user: entitybase, empty password)"
+    echo ""
+    echo "Grafana password: $GRAFANA_ADMIN_PASSWORD"
+    echo "Adminer password: $DBADMIN_PASSWORD"
+    line
+
 # Initialize OpenTofu
 init:
     cd tofu && tofu init
@@ -249,15 +303,15 @@ ssh-backend n="1":
 # --- Ansible ---
 
 # Run ansible playbook with specific tag
-playbook tag:
+playbook tag: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags {{tag}}
 
 # Run benchmarks
-bench:
+bench: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags benchmark
 
 # Start dashboard
-dashboard:
+dashboard: _require-vars
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags dashboard
 
 # Deploy observability stack (Prometheus/Loki/Grafana on import, exporters on all)

@@ -14,6 +14,7 @@
 #   download-items    - Download items dump only (import host)
 #   import-items      - Import items only (import host)
 #   dashboard     - Import progress dashboard (import host)
+#   dbadmin       - Adminer web DB UI on :8081, basic auth (import host)
 #   observability - Prometheus/Loki/Grafana + exporters (all hosts)
 #   benchmark     - Run performance benchmarks (backend hosts)
 #   teardown-prep - Graceful MariaDB shutdown before teardown (tagged 'never',
@@ -60,6 +61,13 @@
   roles:
     - role: dashboard
       tags: [dashboard]
+
+- name: Adminer DB UI
+  hosts: import
+  become: true
+  roles:
+    - role: dbadmin
+      tags: [dbadmin]
 
 - name: Observability
   hosts: all
