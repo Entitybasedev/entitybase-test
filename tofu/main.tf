@@ -189,6 +189,10 @@ resource "openstack_networking_port_v2" "backend" {
   name       = "entitybase-backend-port-${count.index + 1}"
   network_id = openstack_networking_network_v2.entitybase.id
 
+  fixed_ip {
+    subnet_id = openstack_networking_subnet_v2.entitybase.id
+  }
+
   security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
 }
 
@@ -226,6 +230,10 @@ resource "openstack_networking_floatingip_associate_v2" "backend" {
 resource "openstack_networking_port_v2" "mariadb" {
   name       = "entitybase-mariadb-port"
   network_id = openstack_networking_network_v2.entitybase.id
+
+  fixed_ip {
+    subnet_id = openstack_networking_subnet_v2.entitybase.id
+  }
 
   security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
 }
@@ -275,6 +283,10 @@ resource "openstack_compute_volume_attach_v2" "mariadb_data" {
 resource "openstack_networking_port_v2" "import" {
   name       = "entitybase-import-port"
   network_id = openstack_networking_network_v2.entitybase.id
+
+  fixed_ip {
+    subnet_id = openstack_networking_subnet_v2.entitybase.id
+  }
 
   security_group_ids = [openstack_networking_secgroup_v2.entitybase.id]
 }
