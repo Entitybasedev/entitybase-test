@@ -33,15 +33,15 @@ output "inventory" {
   sensitive   = true
   value = try(<<-EOT
 [mariadb]
-${openstack_compute_instance_v2.mariadb.name} ansible_host=${openstack_networking_floatingip_v2.mariadb.address}
+${openstack_compute_instance_v2.mariadb.name} ansible_host=${openstack_networking_floatingip_v2.mariadb.address} node_ip=${openstack_networking_port_v2.mariadb.all_fixed_ips[0]}
 
 [backend]
 %{for i, inst in openstack_compute_instance_v2.backend~}
-${inst.name} ansible_host=${openstack_networking_floatingip_v2.backend[i].address}
+${inst.name} ansible_host=${openstack_networking_floatingip_v2.backend[i].address} node_ip=${openstack_networking_port_v2.backend[i].all_fixed_ips[0]}
 %{endfor~}
 
 [import]
-${openstack_compute_instance_v2.import.name} ansible_host=${openstack_networking_floatingip_v2.import.address}
+${openstack_compute_instance_v2.import.name} ansible_host=${openstack_networking_floatingip_v2.import.address} node_ip=${openstack_networking_port_v2.import.all_fixed_ips[0]}
 
 [entitybase:children]
 backend
