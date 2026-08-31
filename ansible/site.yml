@@ -26,6 +26,13 @@
     - role: common
       tags: [common, always]
 
+- name: MariaDB Host Setup
+  hosts: mariadb
+  become: true
+  roles:
+    - role: entitybase
+      tags: [entitybase]
+
 - name: EntityBase Backends
   hosts: backend
   become: true
