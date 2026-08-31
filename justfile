@@ -155,6 +155,17 @@ _deploy-sequence *flags:
     echo "Infra map: just infra"
     echo "Results saved in $RESULTS_DIR/"
 
+# Remove the generated Ansible inventory (stale IPs after teardown)
+_clean-inventory:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -f "$INVENTORY" ]]; then
+        rm -f "$INVENTORY"
+        echo "Removed stale inventory: $INVENTORY"
+    else
+        echo "No inventory to remove."
+    fi
+
 # --- Infrastructure ---
 
 # Create infrastructure, deploy, and run tests
@@ -199,6 +210,7 @@ teardown-instances:
     echo "Volumes retained for inspection:"
     (cd "$TOFU_DIR" && tofu state list | grep openstack_blockstorage_volume_v3) || echo "  (none)"
     echo "Instances destroyed. Data volumes are still attached to the project."
+    just _clean-inventory
 
 # Tear down the data volumes (step 2, after teardown-instances)
 teardown-volumes:
@@ -220,6 +232,7 @@ destroy:
     echo "=== Destroying infrastructure ==="
     (cd "$TOFU_DIR" && tofu destroy -auto-approve)
     echo "Infrastructure destroyed."
+    just _clean-inventory
 
 # Show infrastructure status
 status:
