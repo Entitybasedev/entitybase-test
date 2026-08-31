@@ -53,18 +53,40 @@
     enabled: yes
   when: "'mariadb' in group_names"
 
-# EntityBase backend role - installs from source with poetry
-- name: Clone EntityBase repository
-  git:
-    repo: "{{ entitybase_repo }}"
-    dest: /opt/entitybase
-    version: "{{ entitybase_branch }}"
-    force: yes
+- name: Create entitybase database and user
+  shell: |
+    mariadb <<'EOF'
+    CREATE DATABASE IF NOT EXISTS entitybase;
+    CREATE USER IF NOT EXISTS 'entitybase'@'10.0.0.%' IDENTIFIED BY '{{ entitybase_db_password }}';
+    GRANT ALL PRIVILEGES ON entitybase.* TO 'entitybase'@'10.0.0.%';
+    FLUSH PRIVILEGES;
+    EOF
+  changed_when: true
+  when: "'mariadb' in group_names"
+
+# EntityBase API backend - dpriskorn/entitybase-backend, run with poetry+uvicorn
+# (requires Python >= 3.13)
+
+- name: Add deadsnakes PPA
+  apt_repository:
+    repo: ppa:deadsnakes/ppa
+    state: present
+    update_cache: yes
+  when: "'backend' in group_names"
+
+- name: Install Python 3.13
+  apt:
+    name:
+      - python3.13
+      - python3.13-venv
+    state: present
+  when: "'backend' in group_names"
 
 - name: Install poetry
   shell: curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python3 -
   args:
     creates: /opt/poetry/bin/poetry
+  when: "'backend' in group_names"
 
 - name: Symlink poetry onto PATH
   file:
@@ -72,17 +94,38 @@
     dest: /usr/local/bin/poetry
     state: link
     force: yes
+  when: "'backend' in group_names"
 
-- name: Install EntityBase dependencies
-  command: /usr/local/bin/poetry install --no-root
+- name: Clone EntityBase backend repository
+  git:
+    repo: "{{ entitybase_backend_repo }}"
+    dest: /opt/entitybase-backend
+    version: "{{ entitybase_backend_branch }}"
+    force: yes
+  when: "'backend' in group_names"
+
+- name: Install EntityBase backend dependencies
+  shell: /usr/local/bin/poetry env use /usr/bin/python3.13 && /usr/local/bin/poetry install
   args:
-    chdir: /opt/entitybase
+    chdir: /opt/entitybase-backend
+  environment:
+    POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  when: "'backend' in group_names"
+
+- name: Create data directory
+  file:
+    path: /opt/entitybase-backend/data
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: "0755"
+  when: "'backend' in group_names"
 
 # EntityBase backend service - only on backend hosts
 - name: Deploy entitybase env config
   template:
     src: entitybase.env.j2
-    dest: /opt/entitybase/.env
+    dest: /opt/entitybase-backend/.env
     mode: "0600"
   when: "'backend' in group_names"
   notify: restart entitybase
@@ -96,6 +139,20 @@
   notify:
     - entitybase daemon reload
     - restart entitybase
+
+- name: Initialize backend database schema
+  command: /usr/local/bin/poetry run python -m models.workers.dev tables setup
+  args:
+    chdir: /opt/entitybase-backend
+  environment:
+    DB_TYPE: mysql
+    DB_HOST: "{{ entitybase_mariadb_host }}"
+    DB_PORT: "3306"
+    DB_DATABASE: entitybase
+    DB_USER: entitybase
+    DB_PASSWORD: "{{ entitybase_db_password }}"
+  run_once: true
+  when: "'backend' in group_names"
 
 - name: Enable and start entitybase service
   systemd:

@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/opt/entitybase
-EnvironmentFile=/opt/entitybase/.env
-ExecStart=/usr/bin/python3 -m entitybase serve
+WorkingDirectory=/opt/entitybase-backend
+EnvironmentFile=/opt/entitybase-backend/.env
+ExecStart=/usr/local/bin/poetry run uvicorn models.rest_api.main:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=5
 

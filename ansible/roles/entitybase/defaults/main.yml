@@ -1,0 +1,5 @@
+---
+# EntityBase role defaults
+entitybase_backend_repo: https://github.com/dpriskorn/entitybase-backend.git
+entitybase_backend_branch: main
+entitybase_db_password: "{{ lookup('env', 'ENTITYBASE_DB_PASSWORD') | default('entitybase-ro', true) }}"
