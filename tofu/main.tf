@@ -369,7 +369,7 @@ resource "openstack_lb_monitor_v2" "backend" {
   type        = "HTTP"
   pool_id     = openstack_lb_pool_v2.backend.id
   http_method = "GET"
-  url_path    = "/"
+  url_path    = "/health"
   delay       = 10
   timeout     = 5
   max_retries = 3
