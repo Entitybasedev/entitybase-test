@@ -337,9 +337,21 @@ logs:
 
 # --- Wikidata ---
 
-# Download lexeme dump (~600MB)
+# Download lexeme dump (~600MB) with live progress on the import host
 download-lexemes:
-    ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags download-lexemes
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ip=$(cd "$TOFU_DIR" && tofu output -raw import_ip)
+    data_dir=/opt/entitybase-import/data
+    echo "Downloading Wikidata lexeme dump on import host ($ip)..."
+    ssh -o StrictHostKeyChecking=accept-new "ubuntu@$ip" "
+        sudo mkdir -p '$data_dir' && sudo chown ubuntu:ubuntu '$data_dir'
+        curl -fL --retry 3 --progress-bar \
+            -o '$data_dir/lexemes.json.gz.part' \
+            https://dumps.wikimedia.org/wikidatawiki/entities/latest-lexemes.json.gz \
+        && mv '$data_dir/lexemes.json.gz.part' '$data_dir/lexemes.json.gz'
+    "
+    echo "Download complete."
 
 # Import lexemes into EntityBase
 import-lexemes:
