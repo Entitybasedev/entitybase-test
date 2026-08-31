@@ -346,10 +346,14 @@ download-lexemes:
     echo "Downloading Wikidata lexeme dump on import host ($ip)..."
     ssh -o StrictHostKeyChecking=accept-new "ubuntu@$ip" "
         sudo mkdir -p '$data_dir' && sudo chown ubuntu:ubuntu '$data_dir'
-        curl -fL --retry 3 --progress-bar \
-            -o '$data_dir/lexemes.json.gz.part' \
-            https://dumps.wikimedia.org/wikidatawiki/entities/latest-lexemes.json.gz \
-        && mv '$data_dir/lexemes.json.gz.part' '$data_dir/lexemes.json.gz'
+        until curl -fL -C - --retry 10 --retry-delay 5 --retry-all-errors \
+              --progress-bar \
+              -o '$data_dir/lexemes.json.gz.part' \
+              https://dumps.wikimedia.org/wikidatawiki/entities/latest-lexemes.json.gz; do
+            echo 'Download interrupted, resuming in 30s...'
+            sleep 30
+        done
+        mv '$data_dir/lexemes.json.gz.part' '$data_dir/lexemes.json.gz'
     "
     echo "Download complete."
 
@@ -357,9 +361,25 @@ download-lexemes:
 import-lexemes:
     ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags import-lexemes
 
-# Download items dump (~150GB)
+# Download items dump (~150GB, resumable) with live progress on the import host
 download-items:
-    ansible-playbook -i {{INVENTORY}} {{ANSIBLE_DIR}}/site.yml --tags download-items
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ip=$(cd "$TOFU_DIR" && tofu output -raw import_ip)
+    data_dir=/opt/entitybase-import/data
+    echo "Downloading Wikidata items dump on import host ($ip)..."
+    ssh -o StrictHostKeyChecking=accept-new "ubuntu@$ip" "
+        sudo mkdir -p '$data_dir' && sudo chown ubuntu:ubuntu '$data_dir'
+        until curl -fL -C - --retry 10 --retry-delay 5 --retry-all-errors \
+              --progress-bar \
+              -o '$data_dir/items.json.gz.part' \
+              https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz; do
+            echo 'Download interrupted, resuming in 30s...'
+            sleep 30
+        done
+        mv '$data_dir/items.json.gz.part' '$data_dir/items.json.gz'
+    "
+    echo "Download complete."
 
 # Import items into EntityBase
 import-items:
